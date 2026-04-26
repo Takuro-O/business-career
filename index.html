@@ -349,7 +349,7 @@
 
   // ── 定数 ──────────────────────────────────────
   const STORAGE_KEY = 'bizcareer_quiz_v1';
-  const API_KEY     = 'AIzaSyBQUZs1448FkRFUtYIZsQgyt2ornNNlB6I'; // ← Google AI StudioのAPIキーをここに書き換える
+  const API_KEY     = 'YOUR_GEMINI_API_KEY_HERE'; // ← Google AI StudioのAPIキーをここに書き換える
   const MODEL       = 'gemini-2.0-flash';
   const MAX_HISTORY = 100;
   const LABELS      = ['A', 'B', 'C', 'D'];
@@ -721,12 +721,30 @@ ${levelDesc}
       }),
     });
 
-    if (!res.ok) throw new Error('API error ' + res.status);
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      console.error('API error status:', res.status, errBody);
+      throw new Error('API error ' + res.status + ' ' + JSON.stringify(errBody));
+    }
     const data = await res.json();
+    console.log('Gemini response:', JSON.stringify(data).slice(0, 500));
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) {
+      console.error('Empty text. Full response:', data);
+      throw new Error('empty response');
+    }
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-    if (!parsed.questions || !Array.isArray(parsed.questions)) throw new Error('invalid response');
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch(e) {
+      console.error('JSON parse error. text was:', text.slice(0, 500));
+      throw new Error('JSON parse failed');
+    }
+    if (!parsed.questions || !Array.isArray(parsed.questions)) {
+      console.error('No questions array. parsed:', parsed);
+      throw new Error('invalid response');
+    }
     return parsed.questions.slice(0, count);
   }
 
