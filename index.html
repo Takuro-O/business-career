@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ffffff">
+  <title>ビジキャリ 問題集</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%233B82F6'/><text y='.9em' font-size='68' x='50%' dominant-baseline='middle' text-anchor='middle'>📝</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%233B82F6'/><text y='.9em' font-size='68' x='50%' dominant-baseline='middle' text-anchor='middle'>📝</text></svg>">
+  <style>
+    /* ── デザイントークン ── */
+    :root {
+      --c-bg: #ffffff;
+      --c-surface: #f8f9fa;
+      --c-border: #eeeeee;
+      --c-text: #1a1a1a;
+      --c-sub: #888888;
+      --c-primary: #3B82F6;
+      --c-primary-light: #eff6ff;
+      --c-danger: #ef4444;
+      --c-success: #22c55e;
+      --c-warning: #f59e0b;
+
+      --radius-s: 8px;
+      --radius-m: 12px;
+      --radius-l: 20px;
+
+      --shadow-card: 0 1px 4px rgba(0,0,0,0.07);
+      --shadow-modal: 0 -4px 24px rgba(0,0,0,0.10);
+
+      /* [MINOR修正] アニメーション時間を変数化 */
+      --dur-fast: 0.18s;
+      --dur-normal: 0.25s;
+      --dur-slow: 0.4s;
+
+      /* [MINOR修正] フォントサイズを変数化 */
+      --fs-xs: 11px;
+      --fs-sm: 12px;
+      --fs-base: 14px;
+      --fs-md: 15px;
+      --fs-lg: 16px;
+      --fs-xl: 17px;
+      --fs-2xl: 18px;
+      --fs-stat: 28px;
+
+      /* z-index */
+      --z-nav: 50;
+      --z-modal: 200;
+      --z-confirm: 250;
+      --z-loading: 300;
+      --z-toast: 999;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-size: var(--fs-lg);
+      line-height: 1.6;
+      -webkit-text-size-adjust: 100%;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+    }
+
+    button { font-family: inherit; cursor: pointer; touch-action: manipulation; border: none; }
+    input, textarea, select { font-family: inherit; font-size: var(--fs-lg); }
+
+    /* タップフィードバック */
+    .tappable {
+      transition: transform var(--dur-fast) ease, opacity var(--dur-fast) ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tappable:active { transform: scale(0.97); opacity: 0.85; }
+
+    /* [MINOR修正] ホバー状態を全インタラクティブ要素に追加 */
+    @media (hover: hover) {
+      .tappable:hover { opacity: 0.85; }
+      .category-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
+      .choice-btn:not(:disabled):hover { border-color: var(--c-primary); background: var(--c-primary-light); }
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    @keyframes slideUp   { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    @keyframes shimmer   { to { background-position: -200% 0; } }
+    @keyframes fadeIn    { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes popIn     { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+    @keyframes spin      { to { transform: rotate(360deg); } }
+
+    .skeleton {
+      background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: var(--radius-m);
+    }
+
+    /* ナビ */
+    .nav-btn {
+      flex: 1; height: 56px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      background: none; border: none;
+      font-size: var(--fs-xs); color: var(--c-sub);
+      position: relative;
+    }
+    .nav-btn.active { color: var(--c-primary); }
+    .nav-btn .nav-icon { font-size: 22px; }
+
+    /* 選択肢ボタン */
+    .choice-btn {
+      width: 100%; padding: 14px 16px;
+      border-radius: var(--radius-m);
+      border: 1.5px solid var(--c-border);
+      background: var(--c-bg);
+      font-size: var(--fs-md); text-align: left; margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease, transform var(--dur-fast) ease;
+      line-height: 1.5;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    }
+    .choice-btn:active:not(:disabled) { transform: scale(0.98); }
+    .choice-btn.correct   { border-color: var(--c-success); background: #f0fdf4; color: #166534; }
+    .choice-btn.incorrect { border-color: var(--c-danger);  background: #fef2f2; color: #991b1b; }
+    .choice-btn:disabled  { cursor: default; }
+
+    /* プログレスバー */
+    .progress-bar  { height: 4px; background: var(--c-border); border-radius: 2px; overflow: hidden; margin: 0 16px 16px; }
+    .progress-fill { height: 100%; background: var(--c-primary); border-radius: 2px; transition: width var(--dur-slow) ease; }
+
+    /* 統計カード */
+    .stat-card {
+      background: var(--c-surface); border-radius: var(--radius-m);
+      padding: 16px; text-align: center; flex: 1;
+    }
+    .stat-num   { font-size: var(--fs-stat); font-weight: 700; color: var(--c-primary); }
+    .stat-label { font-size: var(--fs-sm); color: var(--c-sub); margin-top: 2px; }
+
+    /* タグ */
+    .tag {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: var(--fs-sm); font-weight: 600;
+      background: var(--c-primary-light); color: var(--c-primary);
+    }
+
+    /* カテゴリカード */
+    .category-card {
+      background: var(--c-bg); border: 1px solid var(--c-border);
+      border-radius: var(--radius-m); padding: 16px 16px 16px 20px;
+      margin: 0 16px 10px; box-shadow: var(--shadow-card);
+      display: flex; align-items: center; gap: 14px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease, opacity var(--dur-fast) ease;
+    }
+    .category-card:active { transform: scale(0.98); box-shadow: none; opacity: 0.85; }
+    .category-icon { font-size: 32px; flex-shrink: 0; }
+
+    /* 履歴アイテム */
+    .history-item {
+      background: var(--c-bg); border: 1px solid var(--c-border);
+      border-radius: var(--radius-m); padding: 14px 16px;
+      margin: 0 0 10px; box-shadow: var(--shadow-card);
+      animation: fadeIn var(--dur-normal) ease;
+    }
+
+    /* 結果サークル */
+    .result-circle {
+      width: 120px; height: 120px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      margin: 0 auto 20px; animation: popIn var(--dur-slow) ease;
+    }
+
+    /* セグメントボタン */
+    .seg-btn { transition: background var(--dur-fast) ease, color var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+    .seg-btn.active { background: var(--c-bg) !important; color: var(--c-text) !important; box-shadow: var(--shadow-card); }
+
+    /* フォーカス可視化（アクセシビリティ） */
+    :focus-visible {
+      outline: 2px solid var(--c-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-s);
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ヘッダー -->
+  <header id="main-header" role="banner" style="position:sticky;top:0;z-index:var(--z-nav);background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--c-border);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;">
+    <h1 id="header-title" style="font-size:var(--fs-2xl);font-weight:700;">ビジキャリ 問題集</h1>
+    <div id="header-actions"></div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main role="main" style="flex:1;overflow-y:auto;padding:16px 0 calc(72px + env(safe-area-inset-bottom));">
+
+    <!-- ホーム -->
+    <div id="page-home" class="page active" role="region" aria-label="ホーム">
+      <div style="padding:16px 16px 8px;">
+        <p style="font-size:var(--fs-base);color:var(--c-sub);">分野を選んで問題を解こう</p>
+      </div>
+      <div id="today-stats" style="display:flex;gap:10px;padding:0 16px 20px;"></div>
+      <div id="category-list" role="list"></div>
+    </div>
+
+    <!-- 問題 -->
+    <div id="page-quiz" class="page" role="region" aria-label="問題">
+      <!-- [MAJOR修正] クイズ画面に「中断して戻る」ボタン -->
+      <div style="display:flex;align-items:center;padding:12px 16px 0;gap:8px;">
+        <button class="tappable" id="quiz-back-btn" aria-label="ホームに戻る"
+          style="width:36px;height:36px;border-radius:50%;background:var(--c-surface);border:none;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">←</button>
+        <div class="progress-bar" style="flex:1;margin:0;">
+          <div class="progress-fill" id="quiz-progress" style="width:0%"></div>
+        </div>
+        <span id="quiz-counter" style="font-size:var(--fs-sm);color:var(--c-sub);font-weight:600;white-space:nowrap;"></span>
+      </div>
+      <div style="padding:12px 16px 0;">
+        <div id="quiz-meta" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px;"></div>
+        <div id="quiz-question" style="font-size:var(--fs-xl);font-weight:600;line-height:1.6;margin-bottom:20px;" role="heading" aria-level="2"></div>
+        <div id="quiz-choices" role="group" aria-label="選択肢"></div>
+        <div id="quiz-explanation" style="display:none;margin-top:4px;padding:14px;background:var(--c-surface);border-radius:var(--radius-m);font-size:var(--fs-base);line-height:1.7;color:#374151;" role="alert"></div>
+        <div id="quiz-nav" style="display:none;margin-top:16px;margin-bottom:8px;"></div>
+      </div>
+    </div>
+
+    <!-- 結果 -->
+    <div id="page-result" class="page" role="region" aria-label="結果">
+      <div style="padding:24px 16px 0;text-align:center;">
+        <div id="result-circle" class="result-circle"></div>
+        <p id="result-msg" style="font-size:var(--fs-2xl);font-weight:700;margin-bottom:8px;"></p>
+        <p id="result-sub" style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:24px;"></p>
+        <div style="display:flex;gap:10px;margin-bottom:24px;" id="result-stats"></div>
+        <div id="result-review" style="text-align:left;"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;padding-bottom:8px;">
+          <button class="tappable" onclick="showPage('home')" aria-label="ホームに戻る"
+            style="flex:1;height:48px;background:var(--c-surface);color:var(--c-text);border:none;border-radius:var(--radius-s);font-size:var(--fs-md);font-weight:600;">ホームへ</button>
+          <button class="tappable" id="retry-btn" aria-label="もう一度挑戦する"
+            style="flex:1;height:48px;background:var(--c-primary);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-md);font-weight:600;">もう一度</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 成績 -->
+    <div id="page-stats" class="page" role="region" aria-label="成績">
+      <div style="padding:16px;">
+        <div style="display:flex;gap:10px;margin-bottom:20px;" id="overall-stats"></div>
+        <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">分野別 正答率</p>
+        <div id="field-stats"></div>
+        <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 12px;">学習履歴</p>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ボトムナビ -->
+  <nav role="navigation" aria-label="メインナビゲーション" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--c-border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:var(--z-nav);">
+    <button class="nav-btn tappable active" data-page="home" onclick="showPage('home')"
+      aria-label="ホーム" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">🏠</span><span>ホーム</span>
+    </button>
+    <button class="nav-btn tappable" data-page="stats" onclick="showPage('stats')"
+      aria-label="成績">
+      <span class="nav-icon" aria-hidden="true">📊</span><span>成績</span>
+    </button>
+  </nav>
+</div>
+
+<!-- 設定モーダル -->
+<div id="config-modal" role="dialog" aria-modal="true" aria-labelledby="config-modal-title"
+  style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:flex-end;justify-content:center;">
+  <div onclick="closeConfigModal()" aria-hidden="true"
+    style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
+  <div style="position:relative;width:100%;max-width:430px;background:var(--c-bg);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:24px 16px calc(24px + env(safe-area-inset-bottom));max-height:88dvh;overflow-y:auto;box-shadow:var(--shadow-modal);animation:slideUp var(--dur-normal) ease;">
+    <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 20px;" aria-hidden="true"></div>
+    <div id="config-modal-title" style="font-size:var(--fs-2xl);font-weight:700;margin-bottom:4px;"></div>
+    <div id="config-desc" style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:20px;"></div>
+
+    <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:8px;" id="grade-label">等級</p>
+    <div style="display:flex;gap:8px;margin-bottom:20px;" id="grade-selector" role="group" aria-labelledby="grade-label"></div>
+
+    <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:8px;" id="count-label">問題数</p>
+    <div style="display:flex;gap:8px;margin-bottom:24px;" id="count-selector" role="group" aria-labelledby="count-label">
+      <button class="tappable count-opt" data-n="5"  onclick="selectCount(5)"  aria-pressed="false" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-bg);font-size:var(--fs-base);font-weight:600;color:var(--c-sub);">5問</button>
+      <button class="tappable count-opt" data-n="10" onclick="selectCount(10)" aria-pressed="true"  style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-primary);background:var(--c-primary-light);font-size:var(--fs-base);font-weight:600;color:var(--c-primary);">10問</button>
+      <button class="tappable count-opt" data-n="15" onclick="selectCount(15)" aria-pressed="false" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-bg);font-size:var(--fs-base);font-weight:600;color:var(--c-sub);">15問</button>
+    </div>
+
+    <button class="tappable" id="start-btn" onclick="startQuiz()"
+      style="width:100%;height:52px;background:var(--c-primary);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:700;">
+      AIで問題を生成して開始
+    </button>
+  </div>
+</div>
+
+<!-- [MAJOR修正] カスタム確認ダイアログ（confirm() 廃止） -->
+<div id="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
+  style="display:none;position:fixed;inset:0;z-index:var(--z-confirm);align-items:flex-end;justify-content:center;">
+  <div onclick="closeConfirm()" aria-hidden="true"
+    style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
+  <div style="position:relative;width:100%;max-width:430px;background:var(--c-bg);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:24px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow-modal);animation:slideUp var(--dur-normal) ease;">
+    <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px;" aria-hidden="true"></div>
+    <p id="confirm-title" style="font-size:var(--fs-lg);font-weight:700;margin-bottom:6px;"></p>
+    <p id="confirm-msg"   style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:24px;"></p>
+    <button id="confirm-ok" class="tappable"
+      style="width:100%;height:48px;background:var(--c-danger);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:600;margin-bottom:10px;"></button>
+    <button onclick="closeConfirm()" class="tappable"
+      style="width:100%;height:44px;background:transparent;color:var(--c-sub);border:none;font-size:var(--fs-lg);">キャンセル</button>
+  </div>
+</div>
+
+<!-- [MAJOR修正] クイズ中断確認ダイアログ -->
+<div id="quit-dialog" role="alertdialog" aria-modal="true" aria-labelledby="quit-title"
+  style="display:none;position:fixed;inset:0;z-index:var(--z-confirm);align-items:flex-end;justify-content:center;">
+  <div onclick="closeQuitDialog()" aria-hidden="true"
+    style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
+  <div style="position:relative;width:100%;max-width:430px;background:var(--c-bg);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:24px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow-modal);animation:slideUp var(--dur-normal) ease;">
+    <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px;" aria-hidden="true"></div>
+    <p id="quit-title" style="font-size:var(--fs-lg);font-weight:700;margin-bottom:6px;">中断しますか？</p>
+    <p style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:24px;">進行中の問題は保存されません。</p>
+    <button class="tappable" onclick="doQuitQuiz()"
+      style="width:100%;height:48px;background:var(--c-danger);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:600;margin-bottom:10px;">中断してホームへ</button>
+    <button onclick="closeQuitDialog()" class="tappable"
+      style="width:100%;height:44px;background:transparent;color:var(--c-sub);border:none;font-size:var(--fs-lg);">問題に戻る</button>
+  </div>
+</div>
+
+<!-- ローディング -->
+<div id="loading-overlay" role="status" aria-live="polite" aria-label="問題を生成しています"
+  style="display:none;position:fixed;inset:0;z-index:var(--z-loading);background:rgba(255,255,255,0.92);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div aria-hidden="true" style="width:48px;height:48px;border:4px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <p style="font-size:var(--fs-md);color:var(--c-sub);" id="loading-msg">AIが問題を生成中…</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── 定数 ──────────────────────────────────────
+  const STORAGE_KEY = 'bizcareer_quiz_v1';
+  const API_KEY     = 'AIzaSyBQUZs1448FkRFUtYIZsQgyt2ornNNlB6I'; // ← Google AI StudioのAPIキーをここに書き換える
+  const MODEL       = 'gemini-2.0-flash';
+  const MAX_HISTORY = 100;
+  const LABELS      = ['A', 'B', 'C', 'D'];
+
+  // 8分野定義（ユーザー操作で書き換わらない定数）
+  const FIELDS = [
+    { id: 'jinzai',   icon: '👥', name: '人事・人材開発',      sub: '採用・育成・評価・賃金',         grades: ['3','2','1'],       areas: ['人事・人材開発','労務管理'] },
+    { id: 'keiri',    icon: '💰', name: '経理・財務管理',      sub: '財務諸表・原価計算・資金管理',   grades: ['3','2','1'],       areas: ['経理・財務管理'] },
+    { id: 'eigyo',    icon: '📣', name: '営業・マーケティング', sub: '営業戦略・市場分析・顧客管理',   grades: ['3','2','1'],       areas: ['営業','マーケティング'] },
+    { id: 'seisan',   icon: '🏭', name: '生産管理',            sub: 'QCD・工程管理・在庫管理',        grades: ['BASIC','3','2','1'], areas: ['生産管理プランニング','生産管理オペレーション'] },
+    { id: 'houmu',    icon: '⚖️', name: '企業法務・総務',      sub: '会社法・契約・知的財産',         grades: ['3','2','1'],       areas: ['企業法務','総務'] },
+    { id: 'logi',     icon: '🚚', name: 'ロジスティクス',      sub: '物流管理・サプライチェーン',     grades: ['BASIC','3','2','1'], areas: ['ロジスティクス管理','ロジスティクス・オペレーション'] },
+    { id: 'system',   icon: '💻', name: '経営情報システム',    sub: 'IT戦略・システム企画・セキュリティ', grades: ['3','2','1'],     areas: ['経営情報システム'] },
+    { id: 'senryaku', icon: '🎯', name: '経営戦略',            sub: '経営分析・戦略立案・組織管理',   grades: ['3','2','1'],       areas: ['経営戦略'] },
+  ];
+
+  // ── 状態 ──────────────────────────────────────
+  const defaultState = () => ({ history: [], totalAnswered: 0, totalCorrect: 0 });
+
+  let state = loadState();
+  let quizSession  = { field: null, grade: '3', count: 10, questions: [], current: 0, answers: [] };
+  let selectedGrade = '3';
+  let selectedCount = 10;
+  let _isGenerating = false; // [MAJOR修正] ダブル送信防止フラグ
+  let _confirmCb    = null;
+
+  // ── ストレージ ─────────────────────────────────
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && Array.isArray(parsed.history)) return parsed;
+      return defaultState();
+    } catch { return defaultState(); }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError')
+        showToast('保存容量が不足しています。古い履歴を削除してください。', 'error');
+    }
+  }
+
+  // ── XSSエスケープ（[CRITICAL修正] 全箇所に適用） ──
+  function esc(str) {
+    if (typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ── ページ切り替え ─────────────────────────────
+  function showPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + page);
+    if (target) target.classList.add('active');
+
+    // ナビ アクティブ & aria-current
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      const isActive = b.dataset.page === page;
+      b.classList.toggle('active', isActive);
+      isActive ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+
+    const nav    = document.querySelector('nav');
+    const header = document.getElementById('main-header');
+    const title  = document.getElementById('header-title');
+    const actions = document.getElementById('header-actions');
+
+    nav.style.display = (page === 'quiz') ? 'none' : 'flex';
+
+    if (page === 'home') {
+      header.style.display = 'flex';
+      title.textContent = 'ビジキャリ 問題集';
+      actions.innerHTML = '';
+      renderHome();
+
+    } else if (page === 'quiz') {
+      header.style.display = 'none';
+
+    } else if (page === 'result') {
+      header.style.display = 'flex';
+      title.textContent = '結果';
+      actions.innerHTML = '';
+
+    } else if (page === 'stats') {
+      header.style.display = 'flex';
+      title.textContent = '成績';
+      // [MAJOR修正] リセットボタンを textContent で安全に生成
+      actions.innerHTML = '';
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'tappable';
+      resetBtn.textContent = 'リセット';
+      resetBtn.setAttribute('aria-label', '学習履歴をリセット');
+      Object.assign(resetBtn.style, {
+        background: 'none', border: 'none',
+        fontSize: 'var(--fs-base)', color: 'var(--c-sub)', padding: '8px',
+      });
+      resetBtn.onclick = confirmReset;
+      actions.appendChild(resetBtn);
+      renderStats();
+    }
+  }
+
+  // ── ホーム描画 ─────────────────────────────────
+  function renderHome() {
+    renderTodayStats();
+    renderCategoryList();
+  }
+
+  function renderTodayStats() {
+    const today = new Date().toDateString();
+    const todayH  = state.history.filter(h => new Date(h.date).toDateString() === today);
+    const answered = todayH.reduce((s, h) => s + h.count, 0);
+    const correct  = todayH.reduce((s, h) => s + h.correct, 0);
+    const rate     = answered > 0 ? Math.round(correct / answered * 100) : 0;
+
+    const el = document.getElementById('today-stats');
+    // [CRITICAL修正] 数値のみ（外部データなし）なので安全。念のため数値型で埋め込み
+    el.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-num">${answered}</div>
+        <div class="stat-label">今日の問題数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:${answered > 0 && rate >= 60 ? 'var(--c-success)' : answered > 0 ? 'var(--c-danger)' : 'var(--c-primary)'}">${answered > 0 ? rate + '%' : '–'}</div>
+        <div class="stat-label">今日の正答率</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--c-warning)">${state.history.length}</div>
+        <div class="stat-label">累計セッション</div>
+      </div>
+    `;
+  }
+
+  function renderCategoryList() {
+    const el = document.getElementById('category-list');
+    el.innerHTML = '';
+
+    const fieldStats = {};
+    state.history.forEach(h => {
+      if (!fieldStats[h.field]) fieldStats[h.field] = { answered: 0, correct: 0 };
+      fieldStats[h.field].answered += h.count;
+      fieldStats[h.field].correct  += h.correct;
+    });
+
+    FIELDS.forEach(f => {
+      const fs   = fieldStats[f.id];
+      const rate = fs && fs.answered > 0 ? Math.round(fs.correct / fs.answered * 100) : null;
+
+      // [CRITICAL修正] DOM API で生成し、textContent でセット
+      const card = document.createElement('div');
+      card.className = 'category-card tappable';
+      card.setAttribute('role', 'listitem');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', f.name + (rate !== null ? ` 正答率${rate}%` : ' 未挑戦'));
+      card.onclick = () => openConfig(f.id);
+      card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openConfig(f.id); } };
+
+      const iconEl = document.createElement('div');
+      iconEl.className = 'category-icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      iconEl.textContent = f.icon;
+
+      const infoEl = document.createElement('div');
+      infoEl.style.cssText = 'flex:1;min-width:0;';
+
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:var(--fs-md);font-weight:700;margin-bottom:2px;';
+      nameEl.textContent = f.name;
+
+      const subEl = document.createElement('div');
+      subEl.style.cssText = 'font-size:var(--fs-sm);color:var(--c-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      subEl.textContent = f.sub;
+
+      infoEl.appendChild(nameEl);
+      infoEl.appendChild(subEl);
+
+      const rateEl = document.createElement('span');
+      if (rate !== null) {
+        rateEl.style.cssText = `font-size:var(--fs-base);font-weight:700;color:${rate >= 60 ? 'var(--c-success)' : 'var(--c-danger)'};`;
+        rateEl.textContent = rate + '%';
+      } else {
+        rateEl.style.cssText = 'font-size:var(--fs-sm);color:var(--c-sub);';
+        rateEl.textContent = '未挑戦';
+      }
+
+      const arrowEl = document.createElement('span');
+      arrowEl.setAttribute('aria-hidden', 'true');
+      arrowEl.style.cssText = 'color:var(--c-sub);font-size:var(--fs-lg);margin-left:4px;';
+      arrowEl.textContent = '›';
+
+      card.appendChild(iconEl);
+      card.appendChild(infoEl);
+      card.appendChild(rateEl);
+      card.appendChild(arrowEl);
+      el.appendChild(card);
+    });
+  }
+
+  // ── 設定モーダル ───────────────────────────────
+  function openConfig(fieldId) {
+    // [MAJOR修正] 二重オープン防止
+    if (document.getElementById('config-modal').style.display === 'flex') return;
+
+    const f = FIELDS.find(x => x.id === fieldId);
+    if (!f) return;
+    quizSession.field = f;
+    selectedGrade = '3';
+    selectedCount = 10;
+
+    // [CRITICAL修正] textContent でセット
+    document.getElementById('config-modal-title').textContent = f.icon + ' ' + f.name;
+    document.getElementById('config-desc').textContent = f.sub;
+
+    // グレードボタン生成（DOM API）
+    const gs = document.getElementById('grade-selector');
+    gs.innerHTML = '';
+    f.grades.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = 'tappable grade-opt';
+      btn.dataset.g = g;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = g === 'BASIC' ? 'BASIC' : g + '級';
+      Object.assign(btn.style, {
+        flex: '1', height: '40px', borderRadius: 'var(--radius-s)',
+        border: '1.5px solid var(--c-border)', background: 'var(--c-bg)',
+        fontSize: 'var(--fs-base)', fontWeight: '600', color: 'var(--c-sub)',
+      });
+      btn.onclick = () => selectGrade(g);
+      gs.appendChild(btn);
+    });
+    selectGrade('3');
+
+    // 問題数リセット
+    selectCount(10);
+
+    document.getElementById('config-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // [MAJOR修正] ESC キーで閉じる
+    const ac = new AbortController();
+    document.getElementById('config-modal')._cleanup = () => ac.abort();
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeConfigModal();
+    }, { signal: ac.signal });
+
+    haptic();
+  }
+
+  function closeConfigModal() {
+    const modal = document.getElementById('config-modal');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    modal._cleanup?.();
+  }
+
+  function selectGrade(g) {
+    selectedGrade = g;
+    document.querySelectorAll('.grade-opt').forEach(btn => {
+      const active = btn.dataset.g === g;
+      btn.style.border     = active ? '1.5px solid var(--c-primary)' : '1.5px solid var(--c-border)';
+      btn.style.background = active ? 'var(--c-primary-light)' : 'var(--c-bg)';
+      btn.style.color      = active ? 'var(--c-primary)' : 'var(--c-sub)';
+      btn.setAttribute('aria-pressed', String(active));
+    });
+    haptic();
+  }
+
+  function selectCount(n) {
+    selectedCount = n;
+    document.querySelectorAll('.count-opt').forEach(btn => {
+      const active = parseInt(btn.dataset.n) === n;
+      btn.style.border     = active ? '1.5px solid var(--c-primary)' : '1.5px solid var(--c-border)';
+      btn.style.background = active ? 'var(--c-primary-light)' : 'var(--c-bg)';
+      btn.style.color      = active ? 'var(--c-primary)' : 'var(--c-sub)';
+      btn.setAttribute('aria-pressed', String(active));
+    });
+    haptic();
+  }
+
+  // ── クイズ開始 ─────────────────────────────────
+  async function startQuiz() {
+    // [MAJOR修正] ダブル送信防止
+    if (_isGenerating) return;
+    _isGenerating = true;
+
+    const btn = document.getElementById('start-btn');
+    btn.disabled = true;
+    btn.textContent = '生成中…';
+    btn.style.opacity = '0.6';
+
+    closeConfigModal();
+    quizSession.grade    = selectedGrade;
+    quizSession.count    = selectedCount;
+    quizSession.questions = [];
+    quizSession.current  = 0;
+    quizSession.answers  = [];
+
+    showLoading('AIが問題を生成中… しばらくお待ちください');
+    try {
+      const questions = await generateQuestions(quizSession.field, quizSession.grade, quizSession.count);
+      quizSession.questions = questions;
+      hideLoading();
+      showPage('quiz');
+      renderQuestion();
+    } catch (e) {
+      hideLoading();
+      showToast('問題の生成に失敗しました。もう一度お試しください。', 'error');
+    } finally {
+      _isGenerating    = false;
+      btn.disabled     = false;
+      btn.textContent  = 'AIで問題を生成して開始';
+      btn.style.opacity = '1';
+    }
+  }
+
+  // ── AI問題生成 ─────────────────────────────────
+  async function generateQuestions(field, grade, count) {
+    const gradeLabel = grade === 'BASIC' ? 'BASIC級' : grade + '級';
+    const areasStr   = field.areas.join('・');
+    const levelDesc  = grade === '3' ? '3級は基本的な知識を問う問題（一般社員・係長レベル）'
+                     : grade === '2' ? '2級は応用的な知識と判断力を問う問題（課長レベル）'
+                     : grade === 'BASIC' ? 'BASIC級は入門的な基礎知識を問う問題'
+                     : '1級は高度な専門知識と戦略的思考を問う問題（部長レベル）';
+
+    const prompt = `あなたはビジネス・キャリア検定試験（ビジキャリ）の専門家です。
+以下の条件で問題を${count}問生成してください。
+
+【分野】${field.name}（${areasStr}）
+【等級】${gradeLabel}
+【出題形式】択一式（選択肢4つ）
+【合格基準】${grade === '1' ? '全体の60%以上かつ各問30%以上' : '出題数の概ね60%以上の正答'}
+
+ビジネス・キャリア検定の実際の出題傾向に沿った、実務的で適切な難易度の問題を作成してください。
+${levelDesc}
+
+必ず以下のJSON形式のみで出力してください。余分なテキストは不要です：
+{
+  "questions": [
+    {
+      "q": "問題文（具体的で実務的な内容）",
+      "choices": ["選択肢A", "選択肢B", "選択肢C", "選択肢D"],
+      "answer": 0,
+      "explanation": "正解の解説（なぜその選択肢が正しいか、関連する知識も含めて150字程度）",
+      "topic": "このテーマのキーワード（例：労働基準法・貸借対照表など）"
+    }
+  ]
+}
+
+注意：
+- answerは0始まりのインデックス（0〜3）
+- 選択肢は「適切なものはどれか」「不適切なものはどれか」どちらも混在させる
+- 実際のビジキャリ試験で出題されうる本格的な内容にする
+- JSONのみ出力、マークダウン記法は使わない`;
+
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
+      }),
+    });
+
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (!parsed.questions || !Array.isArray(parsed.questions)) throw new Error('invalid response');
+    return parsed.questions.slice(0, count);
+  }
+
+  // ── 問題表示 ───────────────────────────────────
+  function renderQuestion() {
+    const q     = quizSession.questions[quizSession.current];
+    const total = quizSession.questions.length;
+    const idx   = quizSession.current;
+
+    // プログレス & カウンター
+    document.getElementById('quiz-progress').style.width = ((idx / total) * 100) + '%';
+    document.getElementById('quiz-counter').textContent  = `${idx + 1} / ${total}`;
+
+    // [MAJOR修正] 中断ボタンにイベントを付与
+    const backBtn = document.getElementById('quiz-back-btn');
+    backBtn.onclick = openQuitDialog;
+
+    // [CRITICAL修正] メタ情報は全て textContent / DOM API でセット
+    const field      = quizSession.field;
+    const gradeLabel = quizSession.grade === 'BASIC' ? 'BASIC級' : quizSession.grade + '級';
+    const metaEl     = document.getElementById('quiz-meta');
+    metaEl.innerHTML = '';
+
+    const fieldTag = document.createElement('span');
+    fieldTag.className = 'tag';
+    fieldTag.setAttribute('aria-label', `分野：${field.name}`);
+    fieldTag.textContent = field.icon + ' ' + field.name;
+
+    const gradeTag = document.createElement('span');
+    gradeTag.style.cssText = 'font-size:var(--fs-sm);color:var(--c-sub);';
+    gradeTag.textContent = gradeLabel;
+
+    metaEl.appendChild(fieldTag);
+    metaEl.appendChild(gradeTag);
+
+    if (q.topic) {
+      const topicTag = document.createElement('span');
+      topicTag.style.cssText = 'font-size:var(--fs-xs);color:var(--c-sub);background:var(--c-surface);padding:2px 8px;border-radius:10px;';
+      topicTag.textContent = q.topic;
+      metaEl.appendChild(topicTag);
+    }
+
+    // 問題文（textContent で安全にセット）
+    const questionEl = document.getElementById('quiz-question');
+    questionEl.textContent = q.q;
+    questionEl.style.animation = 'none';
+    requestAnimationFrame(() => { questionEl.style.animation = 'fadeIn 0.3s ease'; });
+
+    // 選択肢（DOM API で生成）
+    const choicesEl = document.getElementById('quiz-choices');
+    choicesEl.innerHTML = '';
+    q.choices.forEach((choice, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn tappable';
+      btn.dataset.idx = i;
+      btn.setAttribute('aria-label', `選択肢${LABELS[i]}：${choice}`);
+      btn.textContent = LABELS[i] + '. ' + choice;
+      btn.onclick = () => handleAnswer(i);
+      choicesEl.appendChild(btn);
+    });
+
+    document.getElementById('quiz-explanation').style.display = 'none';
+    document.getElementById('quiz-nav').style.display = 'none';
+  }
+
+  function handleAnswer(chosenIdx) {
+    const q       = quizSession.questions[quizSession.current];
+    const isRight = chosenIdx === q.answer;
+    quizSession.answers.push({ chosen: chosenIdx, correct: q.answer, isRight });
+    haptic(isRight ? 'light' : 'heavy');
+
+    // ボタン状態更新
+    document.querySelectorAll('.choice-btn').forEach((btn, i) => {
+      btn.disabled = true;
+      btn.removeAttribute('onclick');
+      if (i === q.answer)               btn.classList.add('correct');
+      else if (i === chosenIdx && !isRight) btn.classList.add('incorrect');
+    });
+
+    // [CRITICAL修正] 解説 innerHTML は esc() 経由で安全に
+    const expEl = document.getElementById('quiz-explanation');
+    const resultIcon  = isRight ? '✅' : '❌';
+    const resultLabel = isRight ? '正解！' : '不正解';
+    const resultColor = isRight ? 'var(--c-success)' : 'var(--c-danger)';
+    const correctNote = !isRight ? `<span style="font-size:var(--fs-base);color:var(--c-sub)">正解：${LABELS[q.answer]}</span>` : '';
+
+    expEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:18px;" aria-hidden="true">${resultIcon}</span>
+        <span style="font-weight:700;color:${resultColor}">${resultLabel}</span>
+        ${correctNote}
+      </div>
+      <div style="font-size:var(--fs-base);color:#374151;">${esc(q.explanation)}</div>
+    `;
+    expEl.style.display = 'block';
+    expEl.style.animation = 'none';
+    requestAnimationFrame(() => { expEl.style.animation = 'fadeIn 0.3s ease'; });
+
+    // ナビボタン（DOM API）
+    const navEl  = document.getElementById('quiz-nav');
+    const isLast = quizSession.current >= quizSession.questions.length - 1;
+    navEl.innerHTML = '';
+    const navBtn = document.createElement('button');
+    navBtn.className = 'tappable';
+    navBtn.textContent = isLast ? '結果を見る 📊' : '次の問題 →';
+    navBtn.setAttribute('aria-label', isLast ? '結果を見る' : '次の問題へ');
+    Object.assign(navBtn.style, {
+      width: '100%', height: '52px', background: 'var(--c-primary)',
+      color: '#fff', border: 'none', borderRadius: 'var(--radius-s)',
+      fontSize: 'var(--fs-lg)', fontWeight: '700',
+    });
+    navBtn.onclick = isLast ? finishQuiz : nextQuestion;
+    navEl.appendChild(navBtn);
+    navEl.style.display = 'block';
+
+    setTimeout(() => expEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  }
+
+  function nextQuestion() {
+    quizSession.current++;
+    renderQuestion();
+    document.querySelector('main').scrollTop = 0;
+  }
+
+  function finishQuiz() {
+    const correct = quizSession.answers.filter(a => a.isRight).length;
+    const record  = {
+      id:        crypto.randomUUID?.() ?? (Date.now() + '-' + Math.random().toString(36).slice(2)),
+      date:      new Date().toISOString(),
+      field:     quizSession.field.id,
+      fieldName: quizSession.field.name,
+      fieldIcon: quizSession.field.icon,
+      grade:     quizSession.grade,
+      count:     quizSession.questions.length,
+      correct,
+      questions: quizSession.questions.map((q, i) => ({
+        ...q,
+        userAnswer: quizSession.answers[i]?.chosen,
+        isRight:    quizSession.answers[i]?.isRight,
+      })),
+    };
+
+    state.history.unshift(record);
+    if (state.history.length > MAX_HISTORY) state.history = state.history.slice(0, MAX_HISTORY);
+    state.totalAnswered = (state.totalAnswered || 0) + record.count;
+    state.totalCorrect  = (state.totalCorrect  || 0) + correct;
+    saveState();
+
+    showPage('result');
+    renderResult(record);
+  }
+
+  // ── [MAJOR修正] クイズ中断ダイアログ ─────────────
+  function openQuitDialog() {
+    document.getElementById('quit-dialog').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    const ac = new AbortController();
+    document.getElementById('quit-dialog')._cleanup = () => ac.abort();
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeQuitDialog();
+    }, { signal: ac.signal });
+  }
+  function closeQuitDialog() {
+    const d = document.getElementById('quit-dialog');
+    d.style.display = 'none';
+    document.body.style.overflow = '';
+    d._cleanup?.();
+  }
+  function doQuitQuiz() {
+    closeQuitDialog();
+    showPage('home');
+  }
+
+  // ── 結果表示 ───────────────────────────────────
+  function renderResult(record) {
+    const rate   = Math.round(record.correct / record.count * 100);
+    const passed = rate >= 60;
+
+    const circle = document.getElementById('result-circle');
+    circle.style.background = passed
+      ? 'linear-gradient(135deg, #d1fae5, #a7f3d0)'
+      : 'linear-gradient(135deg, #fee2e2, #fecaca)';
+    // 数値のみ（外部データなし）なので直書き安全
+    circle.innerHTML = `
+      <div style="font-size:36px;font-weight:900;color:${passed ? '#065f46' : '#991b1b'}">${rate}%</div>
+      <div style="font-size:var(--fs-base);color:${passed ? '#065f46' : '#991b1b'};font-weight:600;">${passed ? '合格ライン達成' : '要復習'}</div>
+    `;
+
+    document.getElementById('result-msg').textContent = passed
+      ? '素晴らしい！合格ラインをクリア 🎉'
+      : 'もう少し！60%を目指して再挑戦 💪';
+
+    // [CRITICAL修正] fieldName, fieldIcon を esc() 経由
+    document.getElementById('result-sub').textContent =
+      `${record.fieldIcon} ${record.fieldName} ${record.grade === 'BASIC' ? 'BASIC級' : record.grade + '級'} ／ ${record.count}問中${record.correct}問正解`;
+
+    document.getElementById('result-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-num">${record.correct}</div><div class="stat-label">正解数</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--c-danger)">${record.count - record.correct}</div><div class="stat-label">不正解数</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--c-warning)">${rate}%</div><div class="stat-label">正答率</div></div>
+    `;
+
+    // 間違い問題レビュー（[CRITICAL修正] 全フィールドを esc() 経由）
+    const wrong    = record.questions.filter(q => !q.isRight);
+    const reviewEl = document.getElementById('result-review');
+    if (wrong.length === 0) {
+      reviewEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--c-success);font-weight:700;">全問正解！完璧です ✨</div>`;
+    } else {
+      reviewEl.innerHTML = `
+        <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">間違えた問題 (${wrong.length}問)</p>
+        ${wrong.map(q => `
+          <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:10px;border-left:3px solid var(--c-danger);">
+            <p style="font-size:var(--fs-base);font-weight:600;margin-bottom:6px;color:var(--c-text);">${esc(q.q)}</p>
+            <p style="font-size:var(--fs-sm);color:var(--c-success);">✓ 正解：${LABELS[q.answer]}. ${esc(q.choices[q.answer])}</p>
+            <p style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:6px;">${esc(q.explanation)}</p>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    document.getElementById('retry-btn').onclick = () => {
+      openConfig(record.field);
+      showPage('home');
+    };
+  }
+
+  // ── 成績 ──────────────────────────────────────
+  function renderStats() {
+    const total    = state.totalAnswered || 0;
+    const correct  = state.totalCorrect  || 0;
+    const rate     = total > 0 ? Math.round(correct / total * 100) : 0;
+    const sessions = state.history.length;
+
+    document.getElementById('overall-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">総問題数</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:${total > 0 && rate >= 60 ? 'var(--c-success)' : total > 0 ? 'var(--c-danger)' : 'var(--c-primary)'}">${total > 0 ? rate + '%' : '–'}</div><div class="stat-label">総正答率</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--c-warning)">${sessions}</div><div class="stat-label">セッション数</div></div>
+    `;
+
+    // 分野別（[CRITICAL修正] fs.name, fs.icon は history から取得 → esc() で保護）
+    const fieldStats = {};
+    state.history.forEach(h => {
+      if (!fieldStats[h.field]) fieldStats[h.field] = { answered: 0, correct: 0, name: h.fieldName, icon: h.fieldIcon };
+      fieldStats[h.field].answered += h.count;
+      fieldStats[h.field].correct  += h.correct;
+    });
+
+    const fieldEl = document.getElementById('field-stats');
+    if (Object.keys(fieldStats).length === 0) {
+      fieldEl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--c-sub);font-size:var(--fs-base);">まだ学習記録がありません</div>`;
+    } else {
+      fieldEl.innerHTML = Object.entries(fieldStats).map(([, fs]) => {
+        const r = Math.round(fs.correct / fs.answered * 100);
+        return `
+          <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:var(--fs-base);font-weight:600;">${esc(fs.icon)} ${esc(fs.name)}</span>
+              <span style="font-weight:700;color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</span>
+            </div>
+            <div style="height:6px;background:var(--c-border);border-radius:3px;overflow:hidden;" role="progressbar" aria-valuenow="${r}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(fs.name)} 正答率">
+              <div style="height:100%;width:${r}%;background:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'};border-radius:3px;transition:width 0.5s ease;"></div>
+            </div>
+            <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:4px;">${fs.answered}問中${fs.correct}問正解</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 履歴
+    const histEl = document.getElementById('history-list');
+    if (state.history.length === 0) {
+      histEl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--c-sub);font-size:var(--fs-base);">📭 学習履歴はまだありません</div>`;
+    } else {
+      histEl.innerHTML = state.history.slice(0, 20).map(h => {
+        const r          = Math.round(h.correct / h.count * 100);
+        const d          = new Date(h.date);
+        const dateStr    = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const gradeLabel = h.grade === 'BASIC' ? 'BASIC級' : h.grade + '級';
+        return `
+          <div class="history-item">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:var(--fs-base);font-weight:600;">${esc(h.fieldIcon)} ${esc(h.fieldName)}</span>
+              <span style="font-weight:700;font-size:var(--fs-lg);color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="tag" style="font-size:var(--fs-xs);">${esc(gradeLabel)}</span>
+              <span style="font-size:var(--fs-sm);color:var(--c-sub);">${h.count}問中${h.correct}問正解</span>
+              <span style="font-size:var(--fs-sm);color:var(--c-sub);margin-left:auto;">${dateStr}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // ── [MAJOR修正] カスタム確認ダイアログ（confirm() → カスタムモーダル） ──
+  function showConfirm({ title, message, label, onOk }) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent   = message;
+    const okBtn = document.getElementById('confirm-ok');
+    okBtn.textContent = label || '実行する';
+    okBtn.onclick = () => { closeConfirm(); haptic('heavy'); onOk(); };
+
+    const dialog = document.getElementById('confirm-dialog');
+    dialog.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const ac = new AbortController();
+    dialog._cleanup = () => ac.abort();
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeConfirm();
+    }, { signal: ac.signal });
+  }
+
+  function closeConfirm() {
+    const d = document.getElementById('confirm-dialog');
+    d.style.display = 'none';
+    document.body.style.overflow = '';
+    d._cleanup?.();
+  }
+
+  function confirmReset() {
+    showConfirm({
+      title:   '学習履歴をリセット',
+      message: 'すべての学習記録が削除されます。この操作は取り消せません。',
+      label:   'リセットする',
+      onOk:    () => {
+        state = defaultState();
+        saveState();
+        renderStats();
+        showToast('リセットしました', 'info');
+      },
+    });
+  }
+
+  // ── ユーティリティ ─────────────────────────────
+  function haptic(type = 'light') {
+    navigator.vibrate?.(type === 'heavy' ? [30] : [10]);
+  }
+
+  function showLoading(msg = '処理中…') {
+    document.getElementById('loading-msg').textContent = msg;
+    document.getElementById('loading-overlay').style.display = 'flex';
+  }
+  function hideLoading() {
+    document.getElementById('loading-overlay').style.display = 'none';
+  }
+
+  function showToast(message, type = 'success') {
+    const colors = { success: '#22c55e', error: '#ef4444', info: '#3B82F6' };
+    const icons  = { success: '✓',      error: '✕',       info: 'ℹ' };
+    const t = document.createElement('div');
+    t.setAttribute('role', 'alert');
+    t.setAttribute('aria-live', 'polite');
+
+    const iconEl = document.createElement('b');
+    iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.textContent = icons[type] || '✓';
+
+    const msgEl = document.createElement('span');
+    msgEl.textContent = ' ' + message;
+
+    t.appendChild(iconEl);
+    t.appendChild(msgEl);
+
+    Object.assign(t.style, {
+      position: 'fixed',
+      bottom: 'calc(76px + env(safe-area-inset-bottom))',
+      left: '50%', transform: 'translateX(-50%) translateY(8px)',
+      background: colors[type] || colors.success,
+      color: '#fff', padding: '10px 18px',
+      borderRadius: '20px', fontSize: 'var(--fs-base)', fontWeight: '600',
+      zIndex: String(1000), whiteSpace: 'nowrap',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+      transition: 'opacity 0.25s, transform 0.25s', opacity: '0',
+    });
+    document.body.appendChild(t);
+    requestAnimationFrame(() => {
+      t.style.opacity   = '1';
+      t.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    setTimeout(() => {
+      t.style.opacity = '0';
+      t.addEventListener('transitionend', () => t.remove(), { once: true });
+    }, 3000);
+  }
+
+  // グローバル公開（インライン onclick 用）
+  window.showPage        = showPage;
+  window.openConfig      = openConfig;
+  window.closeConfigModal = closeConfigModal;
+  window.selectGrade     = selectGrade;
+  window.selectCount     = selectCount;
+  window.startQuiz       = startQuiz;
+  window.nextQuestion    = nextQuestion;
+  window.finishQuiz      = finishQuiz;
+  window.confirmReset    = confirmReset;
+  window.closeConfirm    = closeConfirm;
+  window.closeQuitDialog = closeQuitDialog;
+  window.doQuitQuiz      = doQuitQuiz;
+
+  // ── 初期化 ────────────────────────────────────
+  showPage('home');
+})();
+</script>
+</body>
+</html>
