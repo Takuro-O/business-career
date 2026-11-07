@@ -328,10 +328,6 @@
     <div id="page-stats" class="page" role="region" aria-label="成績">
       <div style="padding:16px;">
         <div style="display:flex;gap:10px;margin-bottom:20px;" id="overall-stats"></div>
-        <div id="grade-stats-wrap" style="display:none;">
-          <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">等級別 正答率</p>
-          <div id="grade-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;"></div>
-        </div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">分野別 正答率</p>
         <div id="field-stats"></div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 4px;">苦手テーマ</p>
@@ -377,12 +373,14 @@
     <div style="display:flex;gap:8px;margin-bottom:20px;" id="grade-selector" role="group" aria-labelledby="grade-label"></div>
 
     <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:8px;" id="count-label">問題数</p>
-    <div style="display:flex;gap:8px;margin-bottom:24px;" id="count-selector" role="group" aria-labelledby="count-label">
+    <div style="display:flex;gap:8px;margin-bottom:16px;" id="count-selector" role="group" aria-labelledby="count-label">
       <button class="tappable count-opt" data-n="5"  onclick="selectCount(5)"  aria-pressed="false" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-bg);font-size:var(--fs-base);font-weight:600;color:var(--c-sub);">5問</button>
       <button class="tappable count-opt" data-n="10" onclick="selectCount(10)" aria-pressed="true"  style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-primary);background:var(--c-primary-light);font-size:var(--fs-base);font-weight:600;color: var(--c-primary-text);">10問</button>
       <button class="tappable count-opt" data-n="15" onclick="selectCount(15)" aria-pressed="false" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-bg);font-size:var(--fs-base);font-weight:600;color:var(--c-sub);">15問</button>
     </div>
 
+    <details id="advanced" style="margin-bottom:20px;">
+    <summary class="tappable" style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);cursor:pointer;padding:8px 0;margin-bottom:12px;">詳細設定</summary>
     <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:8px;" id="focus-label">出題の重点</p>
     <div style="display:flex;gap:8px;margin-bottom:6px;" id="focus-selector" role="group" aria-labelledby="focus-label" aria-describedby="focus-hint">
       <button class="tappable focus-opt" data-m="all" onclick="selectFocus('all')" aria-pressed="true" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-primary);background:var(--c-primary-light);font-size:var(--fs-base);font-weight:600;color:var(--c-primary-text);">全範囲</button>
@@ -400,7 +398,13 @@
     <input id="api-key-input" type="password" autocomplete="off" aria-labelledby="api-key-label"
       placeholder="APIキーを貼り付け"
       style="width:100%;height:44px;padding:0 12px;margin-bottom:6px;border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:var(--fs-lg);background:var(--c-bg);color:inherit;">
-    <p style="font-size:12px;color:var(--c-sub);margin-bottom:24px;">キー・資料はこの端末にのみ保存。送信先はGoogleだけです。</p>
+    <p style="font-size:12px;color:var(--c-sub);margin-bottom:16px;">キー・資料はこの端末にのみ保存。送信先はGoogleだけです。</p>
+
+    <label style="display:flex;align-items:center;gap:10px;font-size:var(--fs-base);margin-bottom:4px;">
+      <input id="verify-toggle" type="checkbox" role="switch" checked style="width:20px;height:20px;">
+      検算する（正確さ優先・やや遅い）
+    </label>
+    </details>
 
     <button class="tappable" id="start-btn" onclick="startQuiz()"
       style="width:100%;height:52px;background:var(--c-primary);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:700;">
@@ -479,7 +483,7 @@
   // 優先モデル → 利用不可(404)の場合は次のモデルへフォールバック
   const MODELS      = ['gemini-3.8-flash', 'gemini-3.6-flash'];
   const MAX_HISTORY = 100;
-  const DETAIL_KEEP = 20;   // 問題文まで保存する直近セッション数（履歴画面に表示する件数と同じ）
+  const RECENT_SESSIONS = 20;   // 履歴画面に表示する件数・重複チェックの対象
   const PROGRESS_KEY = 'bizcareer_quiz_progress_v1'; // 解答中クイズの途中保存
   const LABELS      = ['A', 'B', 'C', 'D'];
 
@@ -573,23 +577,10 @@
             if (q && typeof q.topic === 'string' && q.topic) q.topic = normalizeTopic(q.topic, f);
           });
         });
-        parsed.history = slimHistory(parsed.history, DETAIL_KEEP); // 既存データも軽量化
         return parsed;
       }
       return defaultState();
     } catch { return defaultState(); }
-  }
-
-  // 古い履歴は問題文・選択肢・解説を捨て、苦手テーマ集計に必要な topic / isRight だけ残す
-  function slimHistory(history, keep) {
-    return history.map((h, i) => {
-      if (i < keep || h.slim || !Array.isArray(h.questions)) return h;
-      return {
-        ...h,
-        slim: true,
-        questions: h.questions.map(q => ({ topic: q.topic || '', isRight: q.isRight })),
-      };
-    });
   }
 
   function saveState() {
@@ -597,9 +588,9 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
       if (e.name !== 'QuotaExceededError') return;
-      // 容量不足：詳細を残す件数をさらに減らして1回だけ再試行
+      // 容量不足：履歴を50件に減らして1回だけ再試行
       try {
-        state.history = slimHistory(state.history, 5);
+        state.history = state.history.slice(0, 50);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (e2) {
         showToast('保存容量が足りません。成績をリセットしてください。', 'error');
@@ -876,6 +867,9 @@
   }
 
   // ── 設定モーダル ───────────────────────────────
+  function getVerify() { try { return localStorage.getItem('bizcareer_verify') !== '0'; } catch { return true; } }
+  function setVerify(v) { try { localStorage.setItem('bizcareer_verify', v ? '1' : '0'); } catch {} }
+
   function openConfig(fieldId) {
     // [MAJOR修正] 二重オープン防止
     if (document.getElementById('config-modal').style.display === 'flex') return;
@@ -918,13 +912,16 @@
     const srcEl = document.getElementById('source-input');
     if (srcEl) { srcEl.value = getSource(f.id); updateSourceCount(); }
     refreshFocusOptions(f);
+    const vt = document.getElementById('verify-toggle');
+    if (vt) vt.checked = getVerify();
+    const adv = document.getElementById('advanced');
+    if (adv) adv.open = !getApiKey() || !!(srcEl && srcEl.value);
 
     document.getElementById('config-modal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
     activateModal(document.getElementById('config-modal'), closeConfigModal);
 
-    haptic();
   }
 
   // 出題の重点：苦手テーマ（1問でも間違えたテーマ）がある分野だけ「苦手中心」を選べる
@@ -952,7 +949,6 @@
     selectedFocus = m;
     applyFocusStyles();
     updateFocusHint();
-    haptic();
   }
   function updateFocusHint() {
     const hint = document.getElementById('focus-hint');
@@ -987,7 +983,6 @@
       btn.style.color      = active ? 'var(--c-primary-text)' : 'var(--c-sub)';
       btn.setAttribute('aria-pressed', String(active));
     });
-    haptic();
   }
 
   function selectCount(n) {
@@ -999,7 +994,6 @@
       btn.style.color      = active ? 'var(--c-primary-text)' : 'var(--c-sub)';
       btn.setAttribute('aria-pressed', String(active));
     });
-    haptic();
   }
 
   // ── クイズ開始 ─────────────────────────────────
@@ -1024,6 +1018,8 @@
       return;
     }
     setSource(quizSession.field.id, source);
+    const verify = document.getElementById('verify-toggle')?.checked !== false;
+    setVerify(verify);
 
     if (navigator.onLine === false) { showToast(ERROR_MESSAGES.network, 'error'); return; }
     _isGenerating = true;
@@ -1046,7 +1042,7 @@
     try {
       const focus = (selectedFocus === 'weak' && !source) ? 'weak' : 'all';
       const { questions, unverified } = await buildQuiz(
-        quizSession.field, quizSession.grade, quizSession.count, source, focus,
+        quizSession.field, quizSession.grade, quizSession.count, source, focus, verify,
         stage => showLoading(stage === 'verify' ? '問題を検算中…' : '問題を作成中…'));
       quizSession.questions = questions;
       saveProgress();
@@ -1183,7 +1179,7 @@
   }
   function recentQuestionGrams() {
     const out = [];
-    state.history.slice(0, DETAIL_KEEP).forEach(h => {
+    state.history.slice(0, RECENT_SESSIONS).forEach(h => {
       (Array.isArray(h.questions) ? h.questions : []).forEach(q => {
         if (q && typeof q.q === 'string' && Array.isArray(q.choices)) out.push(questionGrams(q.q, q.choices));
       });
@@ -1242,7 +1238,7 @@ ${JSON.stringify(items)}`;
   }
 
   // ── 問題セットの組み立て：生成 → 重複除去 → 検算 → 足りなければ1回だけ追加生成 ──
-  async function buildQuiz(field, grade, count, source, focus, onStage) {
+  async function buildQuiz(field, grade, count, source, focus, verify, onStage) {
     const seen = recentQuestionGrams();
     let accepted = [];
     let unverified = false;
@@ -1262,9 +1258,9 @@ ${JSON.stringify(items)}`;
       cands = removeDuplicates(cands, seen);
       if (!cands.length) continue;
 
-      if (onStage) onStage('verify');
-      let kept;
-      try {
+      let kept = cands;
+      if (verify) try {
+        if (onStage) onStage('verify');
         kept = await verifyQuestions(field, grade, cands, source);
       } catch (e) {
         kept = cands; // 検算に失敗しても出題は止めない（その旨は通知する）
@@ -1517,7 +1513,6 @@ ${planBlock}【良問の条件】
     const isRight = chosenIdx === q.answer;
     quizSession.answers.push({ chosen: chosenIdx, correct: q.answer, isRight });
     saveProgress();
-    haptic(isRight ? 'light' : 'heavy');
     showAnswerUI(q, chosenIdx);
   }
 
@@ -1608,7 +1603,6 @@ ${planBlock}【良問の条件】
 
     state.history.unshift(record);
     if (state.history.length > MAX_HISTORY) state.history = state.history.slice(0, MAX_HISTORY);
-    state.history = slimHistory(state.history, DETAIL_KEEP);
     clearProgress();
     state.totalAnswered = (state.totalAnswered || 0) + record.count;
     state.totalCorrect  = (state.totalCorrect  || 0) + correct;
@@ -1760,7 +1754,7 @@ ${planBlock}【良問の条件】
         <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(gradeLabel)} ／ ${esc(dateStr)} ／ ${record.correct} / ${record.count}問（${rate}%）</div>
       </div>
       <div id="detail-review-wrap"></div>
-      ${record.slim ? `<div style="text-align:center;padding:32px 16px;color:var(--c-sub);font-size:var(--fs-base);line-height:1.7;">この履歴の問題文は保存されていません。（直近${DETAIL_KEEP}回分のみ保存）</div>` : `
+      ${record.slim ? `<div style="text-align:center;padding:32px 16px;color:var(--c-sub);font-size:var(--fs-base);line-height:1.7;">この履歴の問題文は保存されていません。（古い形式の履歴）</div>` : `
       <p style="font-size:var(--fs-xs);color:var(--c-sub);margin:12px 0;">※AI生成のため、公式テキストで確認を</p>
       ${qs.map((q, n) => {
         const choices = Array.isArray(q.choices) ? q.choices : [];
@@ -1818,27 +1812,6 @@ ${planBlock}【良問の条件】
       <div class="stat-card"><div class="stat-num" style="color:${total > 0 && rate >= 60 ? 'var(--c-success)' : total > 0 ? 'var(--c-danger)' : 'var(--c-primary-text)'}">${total > 0 ? rate + '%' : '–'}</div><div class="stat-label">総正答率</div></div>
       <div class="stat-card"><div class="stat-num" style="color:var(--c-warning)">${sessions}</div><div class="stat-label">挑戦回数</div></div>
     `;
-
-    // 等級別
-    const gradeMap = {};
-    state.history.forEach(h => {
-      const g = String(h.grade);
-      if (!gradeMap[g]) gradeMap[g] = { answered: 0, correct: 0 };
-      gradeMap[g].answered += h.count;
-      gradeMap[g].correct  += h.correct;
-    });
-    const gradeOrder = ['BASIC', '3', '2', '1'].filter(g => gradeMap[g] && gradeMap[g].answered > 0);
-    document.getElementById('grade-stats-wrap').style.display = gradeOrder.length ? 'block' : 'none';
-    document.getElementById('grade-stats').innerHTML = gradeOrder.map(g => {
-      const gs = gradeMap[g];
-      const r  = Math.round(gs.correct / gs.answered * 100);
-      return `
-        <div class="stat-card" style="text-align:left;">
-          <div style="font-size:var(--fs-sm);color:var(--c-sub);font-weight:600;">${esc(g === 'BASIC' ? 'BASIC級' : g + '級')}</div>
-          <div class="stat-num" style="color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</div>
-          <div style="font-size:var(--fs-sm);color:var(--c-sub);">${gs.correct} / ${gs.answered}問</div>
-        </div>`;
-    }).join('');
 
     // 分野別（[CRITICAL修正] fs.name, fs.icon は history から取得 → esc() で保護）
     const fieldStats = {};
@@ -1925,7 +1898,7 @@ ${planBlock}【良問の条件】
     document.getElementById('confirm-msg').textContent   = message;
     const okBtn = document.getElementById('confirm-ok');
     okBtn.textContent = label || '実行する';
-    okBtn.onclick = () => { closeConfirm(); haptic('heavy'); onOk(); };
+    okBtn.onclick = () => { closeConfirm(); onOk(); };
 
     const dialog = document.getElementById('confirm-dialog');
     dialog.style.display = 'flex';
@@ -1955,7 +1928,7 @@ ${planBlock}【良問の条件】
   }
 
   // ── モーダル共通：フォーカス移動・Tab循環・Esc・背景の操作無効化 ──
-  const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])';
+  const FOCUSABLE = 'summary, button:not([disabled]), input:not([disabled]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])';
 
   function activateModal(dialog, onEscape) {
     if (dialog._modal) return;
@@ -1986,10 +1959,6 @@ ${planBlock}【良問の条件】
   }
 
   // ── ユーティリティ ─────────────────────────────
-  function haptic(type = 'light') {
-    navigator.vibrate?.(type === 'heavy' ? [30] : [10]);
-  }
-
   function showLoading(msg = '処理中…') {
     document.getElementById('loading-msg').textContent = msg;
     document.getElementById('loading-overlay').style.display = 'flex';
@@ -2085,10 +2054,11 @@ ${planBlock}【良問の条件】
   showPage('home');
   _booted = true;
 
-  // オフライン対応（HTTPS配信時のみ）
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-  }
+  // 以前の版が登録したService Workerとキャッシュを片付ける
+  try {
+    navigator.serviceWorker?.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+    window.caches?.keys().then(ks => ks.filter(k => k.startsWith('bizcareer-')).forEach(k => caches.delete(k))).catch(() => {});
+  } catch {}
 })();
 </script>
 </body>
