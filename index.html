@@ -278,7 +278,7 @@
     <!-- ホーム -->
     <div id="page-home" class="page active" role="region" aria-label="ホーム">
       <div style="padding:16px 16px 8px;">
-        <p style="font-size:var(--fs-base);color:var(--c-sub);">分野を選んで問題を解こう</p>
+        <p style="font-size:var(--fs-base);color:var(--c-sub);">分野を選んで開始</p>
       </div>
       <div id="resume-banner"></div>
       <div id="today-stats" style="display:flex;gap:10px;padding:0 16px 20px;"></div>
@@ -300,7 +300,7 @@
         <div id="quiz-meta" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px;"></div>
         <div id="quiz-question" tabindex="-1" style="font-size:var(--fs-xl);font-weight:600;line-height:1.6;margin-bottom:20px;" role="heading" aria-level="2"></div>
         <div id="quiz-choices" role="group" aria-label="選択肢"></div>
-        <p class="kbd-hint" aria-hidden="true">キー操作：1〜4（またはA〜D）で回答 ／ Enter で次へ</p>
+        <p class="kbd-hint" aria-hidden="true">1〜4で解答・Enterで次へ</p>
         <div id="quiz-explanation" style="display:none;margin-top:4px;padding:14px;background:var(--c-surface);border-radius:var(--radius-m);font-size:var(--fs-base);line-height:1.7;color:var(--c-text-2);" role="status" aria-live="polite"></div>
         <div id="quiz-nav" style="display:none;margin-top:16px;margin-bottom:8px;"></div>
       </div>
@@ -335,10 +335,10 @@
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">分野別 正答率</p>
         <div id="field-stats"></div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 4px;">苦手テーマ</p>
-        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">正答率の低い順（2問以上解いたテーマ）</p>
+        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">2問以上解いたテーマ</p>
         <div id="topic-stats"></div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 4px;">学習履歴</p>
-        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">タップすると問題と解説を見返せます</p>
+        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">タップで詳細を表示</p>
         <div id="history-list"></div>
       </div>
     </div>
@@ -385,13 +385,13 @@
 
     <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:8px;" id="api-key-label">Gemini APIキー</p>
     <input id="api-key-input" type="password" autocomplete="off" aria-labelledby="api-key-label"
-      placeholder="Google AI Studio で発行したキーを貼り付け"
+      placeholder="APIキーを貼り付け（Google AI Studioで発行）"
       style="width:100%;height:44px;padding:0 12px;margin-bottom:6px;border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:var(--fs-base);background:var(--c-bg);color:inherit;">
-    <p style="font-size:12px;color:var(--c-sub);margin-bottom:24px;">キーはこの端末のブラウザにだけ保存され、他には送られません。</p>
+    <p style="font-size:12px;color:var(--c-sub);margin-bottom:24px;">キーはこの端末にのみ保存。送信先はGoogleだけです。</p>
 
     <button class="tappable" id="start-btn" onclick="startQuiz()"
       style="width:100%;height:52px;background:var(--c-primary);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:700;">
-      AIで問題を生成して開始
+      開始
     </button>
   </div>
 </div>
@@ -429,10 +429,10 @@
 </div>
 
 <!-- ローディング -->
-<div id="loading-overlay" role="status" aria-live="polite" aria-label="問題を生成しています"
+<div id="loading-overlay" role="status" aria-live="polite" aria-label="問題を作成しています"
   style="display:none;position:fixed;inset:0;z-index:var(--z-loading);background:var(--c-glass);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
   <div class="spinner" aria-hidden="true" style="width:48px;height:48px;border:4px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-  <p style="font-size:var(--fs-md);color:var(--c-sub);" id="loading-msg">AIが問題を生成中…</p>
+  <p style="font-size:var(--fs-md);color:var(--c-sub);" id="loading-msg">問題を作成中…</p>
 </div>
 
 <script>
@@ -514,7 +514,7 @@
         state.history = slimHistory(state.history, 5);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (e2) {
-        showToast('保存容量が不足しています。成績のリセットをお試しください。', 'error');
+        showToast('保存容量が足りません。成績をリセットしてください。', 'error');
       }
     }
   }
@@ -654,11 +654,11 @@
 
     const title = document.createElement('div');
     title.style.cssText = 'font-size:var(--fs-base);font-weight:700;color: var(--c-primary-text);margin-bottom:2px;';
-    title.textContent = '解答中のクイズがあります';
+    title.textContent = '続きがあります';
 
     const desc = document.createElement('div');
     desc.style.cssText = 'font-size:var(--fs-sm);color:var(--c-text);margin-bottom:12px;';
-    desc.textContent = `${p.field.icon} ${p.field.name} ${gradeLabel}${p.isReview ? '（復習）' : ''} ／ ${p.questions.length}問中${answered}問回答済み`;
+    desc.textContent = `${p.field.icon} ${p.field.name} ${gradeLabel}${p.isReview ? '（復習）' : ''} ／ ${answered} / ${p.questions.length}問 解答済み`;
 
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:8px;';
@@ -715,7 +715,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-num" style="color:var(--c-warning)">${state.history.length}</div>
-        <div class="stat-label">累計セッション</div>
+        <div class="stat-label">挑戦回数</div>
       </div>
     `;
   }
@@ -875,7 +875,7 @@
     const enteredKey = (keyInput ? keyInput.value : '').trim();
     if (enteredKey) setApiKey(enteredKey);
     if (!getApiKey()) {
-      showToast('Gemini APIキーを入力してください。', 'error');
+      showToast('APIキーを入力してください。', 'error');
       return;
     }
     if (navigator.onLine === false) { showToast(ERROR_MESSAGES.network, 'error'); return; }
@@ -883,7 +883,7 @@
 
     const btn = document.getElementById('start-btn');
     btn.disabled = true;
-    btn.textContent = '生成中…';
+    btn.textContent = '作成中…';
     btn.style.opacity = '0.6';
 
     closeConfigModal();
@@ -894,7 +894,7 @@
     quizSession.answers  = [];
     quizSession.isReview = false;
 
-    showLoading('AIが問題を生成中… しばらくお待ちください');
+    showLoading('問題を作成中…');
     try {
       const questions = await generateQuestions(quizSession.field, quizSession.grade, quizSession.count);
       quizSession.questions = questions;
@@ -908,7 +908,7 @@
     } finally {
       _isGenerating    = false;
       btn.disabled     = false;
-      btn.textContent  = 'AIで問題を生成して開始';
+      btn.textContent  = '開始';
       btn.style.opacity = '1';
     }
   }
@@ -1049,14 +1049,14 @@ ${levelDesc}
     constructor(kind) { super(kind); this.kind = kind; }
   }
   const ERROR_MESSAGES = {
-    auth:        'APIキーが無効か、権限がありません。キーを確認してください。',
-    rate_limit:  '利用上限に達しました。しばらく待ってからお試しください。',
-    network:     '通信できませんでした。接続を確認してください。',
-    server:      'AIサーバーが混み合っています。少し待って再試行してください。',
-    blocked:     'AIが問題を生成できませんでした。別の等級・分野でお試しください。',
-    truncated:   '問題が長すぎて途中で切れました。問題数を減らしてお試しください。',
-    bad_request: 'リクエストが受け付けられませんでした。時間をおいて再試行してください。',
-    invalid:     '問題の形式が不正でした。もう一度お試しください。',
+    auth:        'APIキーを確認してください。',
+    rate_limit:  '利用上限です。しばらく待ってください。',
+    network:     '通信できません。接続を確認してください。',
+    server:      'サーバーが混雑中です。少し待って再試行してください。',
+    truncated:   '問題が長すぎます。問題数を減らしてください。',
+    blocked:     '生成に失敗しました。もう一度お試しください。',
+    bad_request: '生成に失敗しました。もう一度お試しください。',
+    invalid:     '生成に失敗しました。もう一度お試しください。',
   };
 
   // ── 問題表示 ───────────────────────────────────
@@ -1161,7 +1161,7 @@ ${levelDesc}
         btn.setAttribute('aria-label', btn.getAttribute('aria-label') + '（正解）');
       } else if (i === chosenIdx && !isRight) {
         btn.classList.add('incorrect');
-        btn.setAttribute('aria-label', btn.getAttribute('aria-label') + '（あなたの回答・不正解）');
+        btn.setAttribute('aria-label', btn.getAttribute('aria-label') + '（あなたの解答・不正解）');
       }
     });
 
@@ -1179,7 +1179,7 @@ ${levelDesc}
         ${correctNote}
       </div>
       <div style="font-size:var(--fs-base);color:var(--c-text-2);">${esc(q.explanation)}</div>
-      <div style="font-size:var(--fs-xs);color:var(--c-sub);margin-top:10px;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</div>
+      <div style="font-size:var(--fs-xs);color:var(--c-sub);margin-top:10px;">※AI生成のため、公式テキストで確認を</div>
     `;
     expEl.style.display = 'block';
     expEl.style.animation = 'none';
@@ -1191,7 +1191,7 @@ ${levelDesc}
     navEl.innerHTML = '';
     const navBtn = document.createElement('button');
     navBtn.className = 'tappable';
-    navBtn.textContent = isLast ? '結果を見る 📊' : '次の問題 →';
+    navBtn.textContent = isLast ? '結果を見る' : '次の問題 →';
     navBtn.setAttribute('aria-label', isLast ? '結果を見る' : '次の問題へ');
     Object.assign(navBtn.style, {
       width: '100%', height: '52px', background: 'var(--c-primary)',
@@ -1273,16 +1273,15 @@ ${levelDesc}
     // 数値のみ（外部データなし）なので直書き安全
     circle.innerHTML = `
       <div style="font-size:36px;font-weight:900;color:${passed ? 'var(--c-ok-text)' : 'var(--c-ng-text)'}">${rate}%</div>
-      <div style="font-size:var(--fs-base);color:${passed ? 'var(--c-ok-text)' : 'var(--c-ng-text)'};font-weight:600;">${passed ? '合格ライン達成' : '要復習'}</div>
     `;
 
     document.getElementById('result-msg').textContent = passed
-      ? '素晴らしい！合格ラインをクリア 🎉'
-      : 'もう少し！60%を目指して再挑戦 💪';
+      ? '目標達成（60%以上）'
+      : 'あと少し（目標60%）';
 
     // [CRITICAL修正] fieldName, fieldIcon を esc() 経由
     document.getElementById('result-sub').textContent =
-      `${record.fieldIcon} ${record.fieldName} ${record.grade === 'BASIC' ? 'BASIC級' : record.grade + '級'} ／ ${record.count}問中${record.correct}問正解`;
+      `${record.fieldIcon} ${record.fieldName} ${record.grade === 'BASIC' ? 'BASIC級' : record.grade + '級'} ／ ${record.correct} / ${record.count}問`;
 
     document.getElementById('result-stats').innerHTML = `
       <div class="stat-card"><div class="stat-num">${record.correct}</div><div class="stat-label">正解数</div></div>
@@ -1294,11 +1293,11 @@ ${levelDesc}
     const wrong    = record.questions.filter(q => !q.isRight);
     const reviewEl = document.getElementById('result-review');
     if (wrong.length === 0) {
-      reviewEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--c-success);font-weight:700;">全問正解！完璧です ✨</div>`;
+      reviewEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--c-success);font-weight:700;">全問正解！</div>`;
     } else {
       reviewEl.innerHTML = `
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">間違えた問題 (${wrong.length}問)</p>
-        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</p>
+        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">※AI生成のため、公式テキストで確認を</p>
         ${wrong.map(q => `
           <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:10px;border-left:3px solid var(--c-danger);">
             <p style="font-size:var(--fs-base);font-weight:600;margin-bottom:6px;color:var(--c-text);">${esc(q.q)}</p>
@@ -1324,7 +1323,7 @@ ${levelDesc}
   function makeReviewButton(record, wrongCount) {
     const btn = document.createElement('button');
     btn.className = 'tappable';
-    btn.textContent = `🔁 間違えた${wrongCount}問を復習`;
+    btn.textContent = `間違えた${wrongCount}問を復習`;
     Object.assign(btn.style, {
       width: '100%', height: '48px', background: 'var(--c-primary-light)',
       color: 'var(--c-primary-text)', border: '1.5px solid var(--c-primary)',
@@ -1381,11 +1380,11 @@ ${levelDesc}
       <button id="detail-back" class="tappable" style="background:none;border:none;font-size:var(--fs-base);color: var(--c-primary-text);font-weight:600;padding:4px 0 12px;">← 成績に戻る</button>
       <div style="margin-bottom:16px;">
         <div style="font-size:var(--fs-lg);font-weight:700;">${esc(record.fieldIcon)} ${esc(record.fieldName)}${record.review ? ' <span class="tag" style="color:var(--c-warning);background:var(--c-warn-bg);">復習</span>' : ''}</div>
-        <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(gradeLabel)} ／ ${esc(dateStr)} ／ ${record.count}問中${record.correct}問正解（${rate}%）</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(gradeLabel)} ／ ${esc(dateStr)} ／ ${record.correct} / ${record.count}問（${rate}%）</div>
       </div>
       <div id="detail-review-wrap"></div>
-      ${record.slim ? `<div style="text-align:center;padding:32px 16px;color:var(--c-sub);font-size:var(--fs-base);line-height:1.7;">この履歴は古いため、問題文と解説は保存されていません。<br>（直近${DETAIL_KEEP}セッション分のみ保存されます。成績・苦手テーマの集計には反映されています）</div>` : `
-      <p style="font-size:var(--fs-xs);color:var(--c-sub);margin:12px 0;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</p>
+      ${record.slim ? `<div style="text-align:center;padding:32px 16px;color:var(--c-sub);font-size:var(--fs-base);line-height:1.7;">この履歴の問題文は保存されていません。（直近${DETAIL_KEEP}回分のみ保存）</div>` : `
+      <p style="font-size:var(--fs-xs);color:var(--c-sub);margin:12px 0;">※AI生成のため、公式テキストで確認を</p>
       ${qs.map((q, n) => {
         const choices = Array.isArray(q.choices) ? q.choices : [];
         const ok = !!q.isRight;
@@ -1398,7 +1397,7 @@ ${levelDesc}
               const isMine = i === q.userAnswer;
               const color = isAns ? 'var(--c-ok-text)' : (isMine ? 'var(--c-ng-text)' : 'var(--c-text)');
               const bg = isAns ? 'var(--c-ok-bg)' : (isMine ? 'var(--c-ng-bg)' : 'var(--c-bg)');
-              const mark = isAns ? ' ✓正解' : (isMine ? ' ✕あなたの回答' : '');
+              const mark = isAns ? ' ✓正解' : (isMine ? ' ✕あなたの解答' : '');
               return `<div style="font-size:var(--fs-base);padding:8px 10px;margin-bottom:6px;border-radius:var(--radius-s);background:${bg};color:${color};border:1px solid var(--c-border);">${LABELS[i] || ''}. ${esc(c)}<b style="font-size:var(--fs-xs);">${mark}</b></div>`;
             }).join('')}
             <p style="font-size:var(--fs-sm);color:var(--c-text-2);margin-top:8px;line-height:1.7;">${esc(q.explanation)}</p>
@@ -1440,7 +1439,7 @@ ${levelDesc}
     document.getElementById('overall-stats').innerHTML = `
       <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">総問題数</div></div>
       <div class="stat-card"><div class="stat-num" style="color:${total > 0 && rate >= 60 ? 'var(--c-success)' : total > 0 ? 'var(--c-danger)' : 'var(--c-primary-text)'}">${total > 0 ? rate + '%' : '–'}</div><div class="stat-label">総正答率</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--c-warning)">${sessions}</div><div class="stat-label">セッション数</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--c-warning)">${sessions}</div><div class="stat-label">挑戦回数</div></div>
     `;
 
     // 等級別
@@ -1460,7 +1459,7 @@ ${levelDesc}
         <div class="stat-card" style="text-align:left;">
           <div style="font-size:var(--fs-sm);color:var(--c-sub);font-weight:600;">${esc(g === 'BASIC' ? 'BASIC級' : g + '級')}</div>
           <div class="stat-num" style="color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</div>
-          <div style="font-size:var(--fs-sm);color:var(--c-sub);">${gs.answered}問中${gs.correct}問正解</div>
+          <div style="font-size:var(--fs-sm);color:var(--c-sub);">${gs.correct} / ${gs.answered}問</div>
         </div>`;
     }).join('');
 
@@ -1474,7 +1473,7 @@ ${levelDesc}
 
     const fieldEl = document.getElementById('field-stats');
     if (Object.keys(fieldStats).length === 0) {
-      fieldEl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--c-sub);font-size:var(--fs-base);">まだ学習記録がありません</div>`;
+      fieldEl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--c-sub);font-size:var(--fs-base);">まだ記録がありません</div>`;
     } else {
       fieldEl.innerHTML = Object.entries(fieldStats).map(([, fs]) => {
         const r = Math.round(fs.correct / fs.answered * 100);
@@ -1487,7 +1486,7 @@ ${levelDesc}
             <div style="height:6px;background:var(--c-border);border-radius:3px;overflow:hidden;" role="progressbar" aria-valuenow="${r}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(fs.name)} 正答率">
               <div style="height:100%;width:${r}%;background:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'};border-radius:3px;transition:width 0.5s ease;"></div>
             </div>
-            <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:4px;">${fs.answered}問中${fs.correct}問正解</div>
+            <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:4px;">${fs.correct} / ${fs.answered}問</div>
           </div>
         `;
       }).join('');
@@ -1498,7 +1497,7 @@ ${levelDesc}
     const weak = computeTopicStats().filter(t => t.rate < 100).slice(0, 5);
     if (weak.length === 0) {
       const hasData = state.history.length > 0;
-      topicEl.innerHTML = `<div style="text-align:center;padding:24px;color:var(--c-sub);font-size:var(--fs-base);">${hasData ? '苦手テーマはまだありません 🎉' : 'データがたまると表示されます'}</div>`;
+      topicEl.innerHTML = `<div style="text-align:center;padding:24px;color:var(--c-sub);font-size:var(--fs-base);">${hasData ? '苦手テーマなし' : 'まだ記録がありません'}</div>`;
     } else {
       topicEl.innerHTML = weak.map(t => `
         <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:8px;">
@@ -1506,7 +1505,7 @@ ${levelDesc}
             <span style="font-size:var(--fs-base);font-weight:600;min-width:0;overflow-wrap:anywhere;">${esc(t.topic)}</span>
             <span style="font-weight:700;flex-shrink:0;color:${t.rate >= 60 ? 'var(--c-warning)' : 'var(--c-danger)'}">${t.rate}%</span>
           </div>
-          <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(t.icon)} ${esc(t.field)} ／ ${t.n}問中${t.ok}問正解</div>
+          <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(t.icon)} ${esc(t.field)} ／ ${t.ok} / ${t.n}問</div>
         </div>
       `).join('');
     }
@@ -1514,7 +1513,7 @@ ${levelDesc}
     // 履歴
     const histEl = document.getElementById('history-list');
     if (state.history.length === 0) {
-      histEl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--c-sub);font-size:var(--fs-base);">📭 学習履歴はまだありません</div>`;
+      histEl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--c-sub);font-size:var(--fs-base);">まだ記録がありません</div>`;
     } else {
       histEl.innerHTML = state.history.slice(0, 20).map(h => {
         const r          = Math.round(h.correct / h.count * 100);
@@ -1530,7 +1529,7 @@ ${levelDesc}
             </div>
             <div style="display:flex;gap:8px;align-items:center;">
               <span class="tag" style="font-size:var(--fs-xs);">${esc(gradeLabel)}</span>
-              <span style="font-size:var(--fs-sm);color:var(--c-sub);">${h.count}問中${h.correct}問正解</span>
+              <span style="font-size:var(--fs-sm);color:var(--c-sub);">${h.correct} / ${h.count}問</span>
               <span style="font-size:var(--fs-sm);color:var(--c-sub);margin-left:auto;">${dateStr}</span>
             </div>
           </button>
@@ -1567,7 +1566,7 @@ ${levelDesc}
   function confirmReset() {
     showConfirm({
       title:   '学習履歴をリセット',
-      message: 'すべての学習記録が削除されます。この操作は取り消せません。',
+      message: 'すべての記録が消えます。元に戻せません。',
       label:   'リセットする',
       onOk:    () => {
         state = defaultState();
