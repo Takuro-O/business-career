@@ -55,8 +55,31 @@ async function runBatch({ html, apiKey, fetchImpl, field, grade, count, existing
 }
 
 export async function generate({ field, grade, target = 100, apiKey, fetchImpl = fetch, outDir = path.join(ROOT, 'bank'),
-  htmlPath = path.join(ROOT, 'index.html'), batch = 10, timeoutMs = 600000, log = console.log }) {
-  const html = fs.readFileSync(htmlPath, 'utf8');
+  htmlPath = path.join(ROOT, 'index.html'), batch = 10, timeoutMs = 1200000, log = console.log }) {
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  // 自動生成は待たされても困らないので、1回の呼び出しの待ち時間の上限を延ばす
+  const TIMEOUT_DECL = 'const REQUEST_TIMEOUT_MS = 90000;';
+  if (!html.includes(TIMEOUT_DECL)) throw new Error('REQUEST_TIMEOUT_MS の宣言が見つかりません');
+  html = html.replace(TIMEOUT_DECL, 'const REQUEST_TIMEOUT_MS = 300000;');
+  // API呼び出しごとの所要時間とトークン数を記録（遅さの原因調べ用）
+  const rawFetch = fetchImpl;
+  fetchImpl = async (url, opts) => {
+    const t = Date.now();
+    const name = String(url).split('/').pop().split('?')[0];
+    try {
+      const res = await rawFetch(url, opts);
+      let extra = '';
+      try {
+        const u = (await res.clone().json()).usageMetadata;
+        if (u) extra = ` 出力${u.candidatesTokenCount ?? '?'}トークン 思考${u.thoughtsTokenCount ?? 0}トークン`;
+      } catch {}
+      log(`API ${name} → ${res.status} ${((Date.now() - t) / 1000).toFixed(0)}秒${extra}`);
+      return res;
+    } catch (e) {
+      log(`API ${name} → エラー(${e.name}) ${((Date.now() - t) / 1000).toFixed(0)}秒`);
+      throw e;
+    }
+  };
   const file = path.join(outDir, `${field}-${grade}.json`);
   fs.mkdirSync(outDir, { recursive: true });
   let bank = { field, grade, updatedAt: null, questions: [] };
