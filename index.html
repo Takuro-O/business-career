@@ -364,7 +364,8 @@
   function setApiKey(v) {
     try { localStorage.setItem(API_KEY_STORAGE, v); } catch (e) { /* 保存できない環境では毎回入力 */ }
   }
-  const MODEL       = 'gemini-1.5-flash-latest';
+  // 優先モデル → 利用不可(404)の場合は次のモデルへフォールバック
+  const MODELS      = ['gemini-3.8-flash', 'gemini-3.6-flash'];
   const MAX_HISTORY = 100;
   const LABELS      = ['A', 'B', 'C', 'D'];
 
@@ -690,7 +691,7 @@
       renderQuestion();
     } catch (e) {
       hideLoading();
-      showToast('問題の生成に失敗しました。もう一度お試しください。', 'error');
+      showToast(ERROR_MESSAGES[e && e.kind] || ERROR_MESSAGES.invalid, 'error');
     } finally {
       _isGenerating    = false;
       btn.disabled     = false;
@@ -709,7 +710,7 @@
                      : '1級は高度な専門知識と戦略的思考を問う問題（部長レベル）';
 
     const prompt = `あなたはビジネス・キャリア検定試験（ビジキャリ）の専門家です。
-以下の条件で問題を${count}問生成してください。
+以下の条件で問題を${count + 2}問生成してください。
 
 【分野】${field.name}（${areasStr}）
 【等級】${gradeLabel}
@@ -738,42 +739,112 @@ ${levelDesc}
 - 実際のビジキャリ試験で出題されうる本格的な内容にする
 - JSONのみ出力、マークダウン記法は使わない`;
 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(getApiKey())}`;
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
-      }),
+    // 余裕を持って多めに依頼し、検証で落ちた分を吸収する
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 16384,
+        responseMimeType: 'application/json', // JSONのみを返させる
+      },
     });
 
+    let res = null;
+    for (const model of MODELS) {
+      try {
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getApiKey() }, // キーはURLに載せない
+          body,
+        });
+      } catch (e) {
+        throw new QuizError('network');
+      }
+      if (res.status !== 404) break; // モデル未提供のときだけ次の候補へ
+    }
+
     if (!res.ok) {
-      const errBody = await res.json().catch(() => ({}));
-      console.error('API error status:', res.status, errBody);
-      throw new Error('API error ' + res.status + ' ' + JSON.stringify(errBody));
+      const status = res.status;
+      if (status === 400 || status === 401 || status === 403) {
+        // 400は不正なキーでも返るため、メッセージで判別
+        const errBody = await res.json().catch(() => ({}));
+        const msg = String(errBody?.error?.message || '');
+        throw new QuizError(/api key|permission|unauthenticated/i.test(msg) || status !== 400 ? 'auth' : 'bad_request');
+      }
+      if (status === 429) throw new QuizError('rate_limit');
+      if (status >= 500) throw new QuizError('server');
+      throw new QuizError('bad_request');
     }
-    const data = await res.json();
-    console.log('Gemini response:', JSON.stringify(data).slice(0, 500));
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!text) {
-      console.error('Empty text. Full response:', data);
-      throw new Error('empty response');
-    }
-    const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+    const data = await res.json().catch(() => null);
+    const cand = data?.candidates?.[0];
+    if (!cand) throw new QuizError(data?.promptFeedback?.blockReason ? 'blocked' : 'invalid');
+    // 思考パーツ(thought)を除いたテキストを結合
+    const text = (cand.content?.parts || [])
+      .filter(p => typeof p.text === 'string' && !p.thought)
+      .map(p => p.text).join('');
+    if (!text) throw new QuizError(cand.finishReason === 'MAX_TOKENS' ? 'truncated' : 'invalid');
+
     let parsed;
     try {
-      parsed = JSON.parse(cleaned);
-    } catch(e) {
-      console.error('JSON parse error. text was:', text.slice(0, 500));
-      throw new Error('JSON parse failed');
+      parsed = JSON.parse(text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim());
+    } catch (e) {
+      throw new QuizError(cand.finishReason === 'MAX_TOKENS' ? 'truncated' : 'invalid');
     }
-    if (!parsed.questions || !Array.isArray(parsed.questions)) {
-      console.error('No questions array. parsed:', parsed);
-      throw new Error('invalid response');
-    }
-    return parsed.questions.slice(0, count);
+
+    const valid = (Array.isArray(parsed?.questions) ? parsed.questions : [])
+      .map(normalizeQuestion)
+      .filter(Boolean);
+    if (valid.length === 0) throw new QuizError('invalid');
+    return valid.slice(0, count);
   }
+
+  // ── 生成問題の検証・正規化（不正な問題は null → 除外） ──
+  function normalizeQuestion(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const q = typeof raw.q === 'string' ? raw.q.trim() : '';
+    const explanation = typeof raw.explanation === 'string' ? raw.explanation.trim() : '';
+    if (!q || !explanation) return null;
+    if (!Array.isArray(raw.choices) || raw.choices.length !== 4) return null;
+    const choices = raw.choices.map(c => (typeof c === 'string' ? c.trim() : ''));
+    if (choices.some(c => !c) || new Set(choices).size !== 4) return null;
+    const answer = Number(raw.answer);
+    if (!Number.isInteger(answer) || answer < 0 || answer > 3) return null;
+
+    // 正解位置の偏り対策：選択肢をシャッフルして正解indexを追従させる
+    const order = shuffle([0, 1, 2, 3]);
+    return {
+      q,
+      choices: order.map(i => choices[i]),
+      answer: order.indexOf(answer),
+      explanation,
+      topic: typeof raw.topic === 'string' ? raw.topic.trim() : '',
+    };
+  }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ── 生成エラー（種類ごとにメッセージを出し分け） ──
+  class QuizError extends Error {
+    constructor(kind) { super(kind); this.kind = kind; }
+  }
+  const ERROR_MESSAGES = {
+    auth:        'APIキーが無効か、権限がありません。キーを確認してください。',
+    rate_limit:  '利用上限に達しました。しばらく待ってからお試しください。',
+    network:     '通信できませんでした。接続を確認してください。',
+    server:      'AIサーバーが混み合っています。少し待って再試行してください。',
+    blocked:     'AIが問題を生成できませんでした。別の等級・分野でお試しください。',
+    truncated:   '問題が長すぎて途中で切れました。問題数を減らしてお試しください。',
+    bad_request: 'リクエストが受け付けられませんでした。時間をおいて再試行してください。',
+    invalid:     '問題の形式が不正でした。もう一度お試しください。',
+  };
 
   // ── 問題表示 ───────────────────────────────────
   function renderQuestion() {
@@ -865,6 +936,7 @@ ${levelDesc}
         ${correctNote}
       </div>
       <div style="font-size:var(--fs-base);color:#374151;">${esc(q.explanation)}</div>
+      <div style="font-size:var(--fs-xs);color:var(--c-sub);margin-top:10px;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</div>
     `;
     expEl.style.display = 'block';
     expEl.style.animation = 'none';
@@ -982,6 +1054,7 @@ ${levelDesc}
     } else {
       reviewEl.innerHTML = `
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">間違えた問題 (${wrong.length}問)</p>
+        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</p>
         ${wrong.map(q => `
           <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:10px;border-left:3px solid var(--c-danger);">
             <p style="font-size:var(--fs-base);font-weight:600;margin-bottom:6px;color:var(--c-text);">${esc(q.q)}</p>
@@ -1144,7 +1217,8 @@ ${levelDesc}
       background: colors[type] || colors.success,
       color: '#fff', padding: '10px 18px',
       borderRadius: '20px', fontSize: 'var(--fs-base)', fontWeight: '600',
-      zIndex: String(1000), whiteSpace: 'nowrap',
+      zIndex: String(1000), width: 'max-content', maxWidth: 'calc(100vw - 32px)',
+      textAlign: 'left', lineHeight: '1.5',
       boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
       transition: 'opacity 0.25s, transform 0.25s', opacity: '0',
     });
