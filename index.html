@@ -243,7 +243,8 @@
         <p id="result-sub" style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:24px;"></p>
         <div style="display:flex;gap:10px;margin-bottom:24px;" id="result-stats"></div>
         <div id="result-review" style="text-align:left;"></div>
-        <div style="display:flex;gap:10px;margin-top:20px;padding-bottom:8px;">
+        <div id="review-btn-wrap" style="margin-top:16px;"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;padding-bottom:8px;">
           <button class="tappable" onclick="showPage('home')" aria-label="ホームに戻る"
             style="flex:1;height:48px;background:var(--c-surface);color:var(--c-text);border:none;border-radius:var(--radius-s);font-size:var(--fs-md);font-weight:600;">ホームへ</button>
           <button class="tappable" id="retry-btn" aria-label="もう一度挑戦する"
@@ -258,9 +259,18 @@
         <div style="display:flex;gap:10px;margin-bottom:20px;" id="overall-stats"></div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">分野別 正答率</p>
         <div id="field-stats"></div>
-        <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 12px;">学習履歴</p>
+        <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 4px;">苦手テーマ</p>
+        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">正答率の低い順（2問以上解いたテーマ）</p>
+        <div id="topic-stats"></div>
+        <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 4px;">学習履歴</p>
+        <p style="font-size:var(--fs-xs);color:var(--c-sub);margin-bottom:12px;">タップすると問題と解説を見返せます</p>
         <div id="history-list"></div>
       </div>
+    </div>
+
+    <!-- 履歴の詳細 -->
+    <div id="page-detail" class="page" role="region" aria-label="履歴の詳細">
+      <div id="detail-body" style="padding:16px;"></div>
     </div>
 
   </main>
@@ -385,7 +395,7 @@
   const defaultState = () => ({ history: [], totalAnswered: 0, totalCorrect: 0 });
 
   let state = loadState();
-  let quizSession  = { field: null, grade: '3', count: 10, questions: [], current: 0, answers: [] };
+  let quizSession  = { field: null, grade: '3', count: 10, questions: [], current: 0, answers: [], isReview: false };
   let selectedGrade = '3';
   let selectedCount = 10;
   let _isGenerating = false; // [MAJOR修正] ダブル送信防止フラグ
@@ -428,8 +438,10 @@
     if (target) target.classList.add('active');
 
     // ナビ アクティブ & aria-current
+    // 履歴の詳細は「成績」タブの配下として扱う
+    const navPage = page === 'detail' ? 'stats' : page;
     document.querySelectorAll('.nav-btn').forEach(b => {
-      const isActive = b.dataset.page === page;
+      const isActive = b.dataset.page === navPage;
       b.classList.toggle('active', isActive);
       isActive ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
     });
@@ -454,6 +466,12 @@
       header.style.display = 'flex';
       title.textContent = '結果';
       actions.innerHTML = '';
+
+    } else if (page === 'detail') {
+      header.style.display = 'flex';
+      title.textContent = '履歴の詳細';
+      actions.innerHTML = '';
+      document.querySelector('main').scrollTop = 0;
 
     } else if (page === 'stats') {
       header.style.display = 'flex';
@@ -681,6 +699,7 @@
     quizSession.questions = [];
     quizSession.current  = 0;
     quizSession.answers  = [];
+    quizSession.isReview = false;
 
     showLoading('AIが問題を生成中… しばらくお待ちください');
     try {
@@ -878,6 +897,13 @@ ${levelDesc}
     metaEl.appendChild(fieldTag);
     metaEl.appendChild(gradeTag);
 
+    if (quizSession.isReview) {
+      const reviewTag = document.createElement('span');
+      reviewTag.style.cssText = 'font-size:var(--fs-xs);font-weight:700;color:var(--c-warning);background:#fffbeb;padding:2px 8px;border-radius:10px;';
+      reviewTag.textContent = '復習';
+      metaEl.appendChild(reviewTag);
+    }
+
     if (q.topic) {
       const topicTag = document.createElement('span');
       topicTag.style.cssText = 'font-size:var(--fs-xs);color:var(--c-sub);background:var(--c-surface);padding:2px 8px;border-radius:10px;';
@@ -977,6 +1003,7 @@ ${levelDesc}
       fieldName: quizSession.field.name,
       fieldIcon: quizSession.field.icon,
       grade:     quizSession.grade,
+      review:    !!quizSession.isReview,
       count:     quizSession.questions.length,
       correct,
       questions: quizSession.questions.map((q, i) => ({
@@ -1065,10 +1092,123 @@ ${levelDesc}
       `;
     }
 
+    // 間違えた問題だけ復習（AI呼び出しなし）
+    const reviewWrap = document.getElementById('review-btn-wrap');
+    reviewWrap.innerHTML = '';
+    if (wrong.length > 0) reviewWrap.appendChild(makeReviewButton(record, wrong.length));
+
     document.getElementById('retry-btn').onclick = () => {
       openConfig(record.field);
       showPage('home');
     };
+  }
+
+  // ── 復習 ──────────────────────────────────────
+  function makeReviewButton(record, wrongCount) {
+    const btn = document.createElement('button');
+    btn.className = 'tappable';
+    btn.textContent = `🔁 間違えた${wrongCount}問を復習`;
+    Object.assign(btn.style, {
+      width: '100%', height: '48px', background: 'var(--c-primary-light)',
+      color: 'var(--c-primary)', border: '1.5px solid var(--c-primary)',
+      borderRadius: 'var(--radius-s)', fontSize: 'var(--fs-md)', fontWeight: '700',
+    });
+    btn.onclick = () => startReview(record);
+    return btn;
+  }
+
+  function startReview(record) {
+    const f = FIELDS.find(x => x.id === record.field);
+    const wrong = (record.questions || []).filter(q => !q.isRight && Array.isArray(q.choices));
+    if (!f || wrong.length === 0) { showToast('復習できる問題がありません。', 'info'); return; }
+
+    // 選択肢の順番を入れ替えて、位置で覚えてしまうのを防ぐ
+    const qs = wrong.map(q => {
+      const order = shuffle(q.choices.map((_, i) => i));
+      return {
+        q: q.q,
+        choices: order.map(i => q.choices[i]),
+        answer: order.indexOf(q.answer),
+        explanation: q.explanation,
+        topic: q.topic || '',
+      };
+    });
+    Object.assign(quizSession, {
+      field: f, grade: record.grade, count: qs.length,
+      questions: qs, current: 0, answers: [], isReview: true,
+    });
+    showPage('quiz');
+    renderQuestion();
+    document.querySelector('main').scrollTop = 0;
+  }
+
+  // ── 履歴の詳細 ─────────────────────────────────
+  function openDetail(id) {
+    const record = state.history.find(h => h.id === id);
+    if (!record) return;
+    renderDetail(record);
+    showPage('detail');
+  }
+
+  function renderDetail(record) {
+    const body  = document.getElementById('detail-body');
+    const qs    = Array.isArray(record.questions) ? record.questions : [];
+    const wrong = qs.filter(q => !q.isRight);
+    const rate  = record.count > 0 ? Math.round(record.correct / record.count * 100) : 0;
+    const d     = new Date(record.date);
+    const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const gradeLabel = record.grade === 'BASIC' ? 'BASIC級' : record.grade + '級';
+
+    body.innerHTML = `
+      <button id="detail-back" class="tappable" style="background:none;border:none;font-size:var(--fs-base);color:var(--c-primary);font-weight:600;padding:4px 0 12px;">← 成績に戻る</button>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:var(--fs-lg);font-weight:700;">${esc(record.fieldIcon)} ${esc(record.fieldName)}${record.review ? ' <span class="tag" style="color:var(--c-warning);background:#fffbeb;">復習</span>' : ''}</div>
+        <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(gradeLabel)} ／ ${esc(dateStr)} ／ ${record.count}問中${record.correct}問正解（${rate}%）</div>
+      </div>
+      <div id="detail-review-wrap"></div>
+      <p style="font-size:var(--fs-xs);color:var(--c-sub);margin:12px 0;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</p>
+      ${qs.map((q, n) => {
+        const choices = Array.isArray(q.choices) ? q.choices : [];
+        const ok = !!q.isRight;
+        return `
+          <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:12px;border-left:3px solid ${ok ? 'var(--c-success)' : 'var(--c-danger)'};">
+            <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-bottom:4px;">第${n + 1}問 ${ok ? '✅ 正解' : '❌ 不正解'}${q.topic ? ' ／ ' + esc(q.topic) : ''}</div>
+            <p style="font-size:var(--fs-base);font-weight:600;margin-bottom:10px;">${esc(q.q)}</p>
+            ${choices.map((c, i) => {
+              const isAns = i === q.answer;
+              const isMine = i === q.userAnswer;
+              const color = isAns ? '#166534' : (isMine ? '#991b1b' : 'var(--c-text)');
+              const bg = isAns ? '#f0fdf4' : (isMine ? '#fef2f2' : 'var(--c-bg)');
+              const mark = isAns ? ' ✓正解' : (isMine ? ' ✕あなたの回答' : '');
+              return `<div style="font-size:var(--fs-base);padding:8px 10px;margin-bottom:6px;border-radius:var(--radius-s);background:${bg};color:${color};border:1px solid var(--c-border);">${LABELS[i] || ''}. ${esc(c)}<b style="font-size:var(--fs-xs);">${mark}</b></div>`;
+            }).join('')}
+            <p style="font-size:var(--fs-sm);color:#374151;margin-top:8px;line-height:1.7;">${esc(q.explanation)}</p>
+          </div>`;
+      }).join('')}
+    `;
+
+    document.getElementById('detail-back').onclick = () => showPage('stats');
+    if (wrong.length > 0) document.getElementById('detail-review-wrap').appendChild(makeReviewButton(record, wrong.length));
+  }
+
+  // ── 苦手テーマ集計 ─────────────────────────────
+  function computeTopicStats() {
+    const map = new Map();
+    state.history.forEach(h => {
+      (Array.isArray(h.questions) ? h.questions : []).forEach(q => {
+        const topic = typeof q.topic === 'string' ? q.topic.trim() : '';
+        if (!topic || typeof q.isRight !== 'boolean') return;
+        const key = h.field + '::' + topic;
+        if (!map.has(key)) map.set(key, { topic, icon: h.fieldIcon, field: h.fieldName, n: 0, ok: 0 });
+        const t = map.get(key);
+        t.n++;
+        if (q.isRight) t.ok++;
+      });
+    });
+    return [...map.values()]
+      .filter(t => t.n >= 2)
+      .map(t => ({ ...t, rate: Math.round(t.ok / t.n * 100) }))
+      .sort((a, b) => a.rate - b.rate || b.n - a.n);
   }
 
   // ── 成績 ──────────────────────────────────────
@@ -1113,6 +1253,24 @@ ${levelDesc}
       }).join('');
     }
 
+    // 苦手テーマ（正答率の低い順に最大5件。100%のテーマは除外）
+    const topicEl = document.getElementById('topic-stats');
+    const weak = computeTopicStats().filter(t => t.rate < 100).slice(0, 5);
+    if (weak.length === 0) {
+      const hasData = state.history.length > 0;
+      topicEl.innerHTML = `<div style="text-align:center;padding:24px;color:var(--c-sub);font-size:var(--fs-base);">${hasData ? '苦手テーマはまだありません 🎉' : 'データがたまると表示されます'}</div>`;
+    } else {
+      topicEl.innerHTML = weak.map(t => `
+        <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span style="font-size:var(--fs-base);font-weight:600;min-width:0;overflow-wrap:anywhere;">${esc(t.topic)}</span>
+            <span style="font-weight:700;flex-shrink:0;color:${t.rate >= 60 ? 'var(--c-warning)' : 'var(--c-danger)'}">${t.rate}%</span>
+          </div>
+          <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(t.icon)} ${esc(t.field)} ／ ${t.n}問中${t.ok}問正解</div>
+        </div>
+      `).join('');
+    }
+
     // 履歴
     const histEl = document.getElementById('history-list');
     if (state.history.length === 0) {
@@ -1124,9 +1282,10 @@ ${levelDesc}
         const dateStr    = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         const gradeLabel = h.grade === 'BASIC' ? 'BASIC級' : h.grade + '級';
         return `
-          <div class="history-item">
+          <button type="button" class="history-item tappable" data-id="${esc(h.id)}" aria-label="${esc(h.fieldName)} ${esc(gradeLabel)} ${r}% 詳細を見る"
+            style="display:block;width:100%;text-align:left;color:inherit;font-size:inherit;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <span style="font-size:var(--fs-base);font-weight:600;">${esc(h.fieldIcon)} ${esc(h.fieldName)}</span>
+              <span style="font-size:var(--fs-base);font-weight:600;">${esc(h.fieldIcon)} ${esc(h.fieldName)}${h.review ? ' <span class="tag" style="font-size:var(--fs-xs);color:var(--c-warning);background:#fffbeb;">復習</span>' : ''}</span>
               <span style="font-weight:700;font-size:var(--fs-lg);color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -1134,9 +1293,13 @@ ${levelDesc}
               <span style="font-size:var(--fs-sm);color:var(--c-sub);">${h.count}問中${h.correct}問正解</span>
               <span style="font-size:var(--fs-sm);color:var(--c-sub);margin-left:auto;">${dateStr}</span>
             </div>
-          </div>
+          </button>
         `;
       }).join('');
+      histEl.onclick = e => {
+        const item = e.target.closest('[data-id]');
+        if (item) openDetail(item.dataset.id);
+      };
     }
   }
 
