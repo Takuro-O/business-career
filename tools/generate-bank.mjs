@@ -55,7 +55,7 @@ async function runBatch({ html, apiKey, fetchImpl, field, grade, count, existing
 }
 
 export async function generate({ field, grade, target = 100, apiKey, fetchImpl = fetch, outDir = path.join(ROOT, 'bank'),
-  htmlPath = path.join(ROOT, 'index.html'), batch = 10, timeoutMs = 1200000, log = console.log }) {
+  htmlPath = path.join(ROOT, 'index.html'), batch = 10, timeoutMs = 1200000, failureWaitMs = 60000, log = console.log }) {
   let html = fs.readFileSync(htmlPath, 'utf8');
   // 自動生成は待たされても困らないので、1回の呼び出しの待ち時間の上限を延ばす
   const TIMEOUT_DECL = 'const REQUEST_TIMEOUT_MS = 90000;';
@@ -93,10 +93,12 @@ export async function generate({ field, grade, target = 100, apiKey, fetchImpl =
   let bank = { field, grade, updatedAt: null, questions: [] };
   try { bank = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
   let failures = 0, stopped = '';
-  while (bank.questions.length < target && failures < 3) {
+  while (bank.questions.length < target && failures < 5) {
     const res = await runBatch({ html, apiKey, fetchImpl, field, grade, count: batch, existing: bank.questions, timeoutMs });
     if (res.quota) { stopped = '無料枠に達したため中断'; break; }
-    if (res.error) { failures++; log(`失敗(${failures}/3): ${res.error}`); continue; }
+    if (res.error) { failures++; log(`失敗(${failures}/5): ${res.error}`);
+      await sleep(failureWaitMs); // 混雑・1分あたりの上限は待てば戻る
+      continue; }
     failures = 0;
     const now = new Date().toISOString().slice(0, 10);
     for (const q of res.questions) {
@@ -106,7 +108,7 @@ export async function generate({ field, grade, target = 100, apiKey, fetchImpl =
     fs.writeFileSync(file, JSON.stringify(bank, null, 1) + '\n');
     log(`${field}-${grade}: ${bank.questions.length}/${target}問`);
   }
-  if (!stopped && failures >= 3) stopped = '失敗が続いたため中断';
+  if (!stopped && failures >= 5) stopped = '失敗が続いたため中断';
   return { count: bank.questions.length, stopped };
 }
 
