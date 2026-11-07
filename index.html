@@ -400,6 +400,10 @@
       style="width:100%;height:44px;padding:0 12px;margin-bottom:6px;border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:var(--fs-lg);background:var(--c-bg);color:inherit;">
     <p style="font-size:12px;color:var(--c-sub);margin-bottom:16px;">キー・資料はこの端末にのみ保存。送信先はGoogleだけです。</p>
 
+    <label style="display:flex;align-items:center;gap:10px;font-size:var(--fs-base);margin-bottom:12px;">
+      <input id="live-toggle" type="checkbox" role="switch" style="width:20px;height:20px;">
+      AIでその場で作る（APIキーが必要・時間がかかる）
+    </label>
     <label style="display:flex;align-items:center;gap:10px;font-size:var(--fs-base);margin-bottom:4px;">
       <input id="verify-toggle" type="checkbox" role="switch" checked style="width:20px;height:20px;">
       検算する（正確さ優先・やや遅い）
@@ -871,6 +875,38 @@
   function getVerify() { try { return localStorage.getItem('bizcareer_verify') !== '0'; } catch { return true; } }
   function setVerify(v) { try { localStorage.setItem('bizcareer_verify', v ? '1' : '0'); } catch {} }
 
+  // ── 問題バンク：あらかじめ作って検算済みの問題（bank/<分野>-<等級>.json）から出す ──
+  const _bankCache = {};
+  function getBank(field, grade) {
+    const key = field.id + '-' + grade;
+    if (!_bankCache[key]) {
+      _bankCache[key] = fetch(`bank/${key}.json`, { signal: AbortSignal.timeout(10000) })
+        .then(r => (r.ok ? r.json() : null))
+        .then(j => {
+          const qs = (j && Array.isArray(j.questions) ? j.questions : [])
+            .map(raw => normalizeQuestion(raw, field, false)).filter(Boolean);
+          return qs.length >= 10 ? qs : null;
+        })
+        .catch(() => null);
+    }
+    return _bankCache[key];
+  }
+  // 直近に解いた問題と似ていないものを優先し、出題テーマの割り振りに沿って選ぶ
+  function pickFromBank(field, bank, count, focus) {
+    const seen = recentQuestionGrams();
+    const isSeen = q => { const g = questionGrams(q.q, q.choices); return seen.some(x => jaccard(x, g) >= DUP_THRESHOLD); };
+    const fresh = shuffle(bank.filter(q => !isSeen(q)));
+    const old = shuffle(bank.filter(q => isSeen(q)));
+    const picked = [];
+    for (const topic of planTopics(field, count, focus)) {
+      const i = fresh.findIndex(q => q.topic === topic);
+      if (i >= 0) picked.push(fresh.splice(i, 1)[0]);
+    }
+    return shuffle(picked.concat(fresh, old).slice(0, count));
+  }
+  const getLive = () => { try { return localStorage.getItem('bizcareer_live') === '1'; } catch { return false; } };
+  const setLive = v => { try { localStorage.setItem('bizcareer_live', v ? '1' : '0'); } catch {} };
+
   // ── 無料枠の目安：1日のAPI呼び出し回数を端末内で数え、超えそうなら生成しない ──
   // 上限はAI Studioのrate limitページで確認した値に合わせて変更する。リセットは太平洋時間の0時。
   const DAILY_LIMIT = 20;
@@ -945,8 +981,10 @@
     refreshFocusOptions(f);
     const vt = document.getElementById('verify-toggle');
     if (vt) vt.checked = getVerify();
+    const lt = document.getElementById('live-toggle');
+    if (lt) lt.checked = getLive();
     const adv = document.getElementById('advanced');
-    if (adv) adv.open = !getApiKey() || !!(srcEl && srcEl.value);
+    if (adv) adv.open = !!(srcEl && srcEl.value);
 
     document.getElementById('config-modal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -1029,6 +1067,20 @@
 
   // ── クイズ開始 ─────────────────────────────────
   async function startQuiz() {
+    if (_isGenerating) return;
+    // バンクがあり、資料もAI生成の指定もなければバンクから出す（APIキー不要）
+    const srcText = (document.getElementById('source-input')?.value || '').trim();
+    const live = document.getElementById('live-toggle')?.checked === true;
+    setLive(live);
+    let bank = null;
+    if (!srcText && !live && quizSession.field) {
+      _isGenerating = true;
+      try { bank = await getBank(quizSession.field, selectedGrade); } finally { _isGenerating = false; }
+    }
+    return startQuizInner(bank);
+  }
+
+  async function startQuizInner(bank) {
     // [MAJOR修正] ダブル送信防止
     if (_isGenerating) return;
 
@@ -1036,8 +1088,9 @@
     const keyInput = document.getElementById('api-key-input');
     const enteredKey = (keyInput ? keyInput.value : '').trim();
     if (enteredKey) setApiKey(enteredKey);
-    if (!getApiKey()) {
-      showToast('APIキーを入力してください。', 'error');
+    if (!bank && !getApiKey()) {
+      const adv = document.getElementById('advanced'); if (adv) adv.open = true;
+      showToast('「詳細設定」にAPIキーを入力してください。', 'error');
       return;
     }
 
@@ -1053,11 +1106,11 @@
     setVerify(verify);
 
     const verifyOn = document.getElementById('verify-toggle')?.checked !== false;
-    if (!quotaLeft(verifyOn ? 2 : 1)) {
+    if (!bank && !quotaLeft(verifyOn ? 2 : 1)) {
       showToast(`今日の無料枠の目安に達しました。${resetTimeText()}ごろ（日本時間）に戻ります。`, 'error');
       return;
     }
-    if (navigator.onLine === false) { showToast(ERROR_MESSAGES.network, 'error'); return; }
+    if (!bank && navigator.onLine === false) { showToast(ERROR_MESSAGES.network, 'error'); return; }
     _isGenerating = true;
 
     const btn = document.getElementById('start-btn');
@@ -1077,9 +1130,11 @@
     showLoading('問題を作成中…');
     try {
       const focus = (selectedFocus === 'weak' && !source) ? 'weak' : 'all';
-      const { questions, unverified } = await buildQuiz(
-        quizSession.field, quizSession.grade, quizSession.count, source, focus, verify,
-        stage => showLoading(stage === 'verify' ? '問題を検算中…' : '問題を作成中…'));
+      const { questions, unverified } = bank
+        ? { questions: pickFromBank(quizSession.field, bank, quizSession.count, focus), unverified: false }
+        : await buildQuiz(
+          quizSession.field, quizSession.grade, quizSession.count, source, focus, verify,
+          stage => showLoading(stage === 'verify' ? '問題を検算中…' : '問題を作成中…'));
       quizSession.questions = questions;
       saveProgress();
       hideLoading();
