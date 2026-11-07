@@ -458,15 +458,68 @@
 
   // 8分野定義（ユーザー操作で書き換わらない定数）
   const FIELDS = [
-    { id: 'jinzai',   icon: '👥', name: '人事・人材開発',      sub: '採用・育成・評価・賃金',         grades: ['3','2','1'],       areas: ['人事・人材開発','労務管理'] },
-    { id: 'keiri',    icon: '💰', name: '経理・財務管理',      sub: '財務諸表・原価計算・資金管理',   grades: ['3','2','1'],       areas: ['経理・財務管理'] },
-    { id: 'eigyo',    icon: '📣', name: '営業・マーケティング', sub: '営業戦略・市場分析・顧客管理',   grades: ['3','2','1'],       areas: ['営業','マーケティング'] },
-    { id: 'seisan',   icon: '🏭', name: '生産管理',            sub: 'QCD・工程管理・在庫管理',        grades: ['BASIC','3','2','1'], areas: ['生産管理プランニング','生産管理オペレーション'] },
-    { id: 'houmu',    icon: '⚖️', name: '企業法務・総務',      sub: '会社法・契約・知的財産',         grades: ['3','2','1'],       areas: ['企業法務','総務'] },
-    { id: 'logi',     icon: '🚚', name: 'ロジスティクス',      sub: '物流管理・サプライチェーン',     grades: ['BASIC','3','2','1'], areas: ['ロジスティクス管理','ロジスティクス・オペレーション'] },
-    { id: 'system',   icon: '💻', name: '経営情報システム',    sub: 'IT戦略・システム企画・セキュリティ', grades: ['3','2','1'],     areas: ['経営情報システム'] },
-    { id: 'senryaku', icon: '🎯', name: '経営戦略',            sub: '経営分析・戦略立案・組織管理',   grades: ['3','2','1'],       areas: ['経営戦略'] },
+    { id: 'jinzai',   icon: '👥', name: '人事・人材開発',      sub: '採用・育成・評価・賃金',         grades: ['3','2','1'],       areas: ['人事・人材開発','労務管理'],
+      topics: ['人事管理', '採用', '配置・異動', '人事評価', '賃金管理', '退職金・企業年金', '人材育成', 'キャリア開発', '組織開発', '労働契約', '労働基準法', '労働時間管理', '就業規則', '労働安全衛生', '社会保険・労働保険', '労使関係', 'ハラスメント対策', 'ダイバーシティ'] },
+    { id: 'keiri',    icon: '💰', name: '経理・財務管理',      sub: '財務諸表・原価計算・資金管理',   grades: ['3','2','1'],       areas: ['経理・財務管理'],
+      topics: ['財務会計', '簿記', '貸借対照表', '損益計算書', 'キャッシュ・フロー計算書', '財務諸表分析', '原価計算', '管理会計', '予算管理', '資金管理', '資金調達', '投資の経済性計算', '税務', '減価償却', '内部統制'] },
+    { id: 'eigyo',    icon: '📣', name: '営業・マーケティング', sub: '営業戦略・市場分析・顧客管理',   grades: ['3','2','1'],       areas: ['営業','マーケティング'],
+      topics: ['営業戦略', '営業活動管理', '営業計画', '顧客管理', '顧客満足', '市場分析', 'マーケティング・リサーチ', 'マーケティング戦略', 'セグメンテーション', '製品戦略', '価格戦略', 'チャネル戦略', 'プロモーション', 'ブランド管理', '販売管理'] },
+    { id: 'seisan',   icon: '🏭', name: '生産管理',            sub: 'QCD・工程管理・在庫管理',        grades: ['BASIC','3','2','1'], areas: ['生産管理プランニング','生産管理オペレーション'],
+      topics: ['生産計画', '需要予測', '工程管理', '資材・購買管理', '在庫管理', '品質管理', '原価管理', '設備管理', '作業管理', '納期管理', '生産方式', 'MRP', '改善活動', '生産情報システム'] },
+    { id: 'houmu',    icon: '⚖️', name: '企業法務・総務',      sub: '会社法・契約・知的財産',         grades: ['3','2','1'],       areas: ['企業法務','総務'],
+      topics: ['会社法', '民法', '契約', '取引法務', '知的財産権', 'コンプライアンス', '株主総会', '取締役会', '文書管理', '総務管理', '危機管理', '個人情報保護', '債権管理', '紛争解決', '独占禁止法'] },
+    { id: 'logi',     icon: '🚚', name: 'ロジスティクス',      sub: '物流管理・サプライチェーン',     grades: ['BASIC','3','2','1'], areas: ['ロジスティクス管理','ロジスティクス・オペレーション'],
+      topics: ['物流管理', 'サプライチェーン', '在庫管理', '輸配送管理', '倉庫管理', '物流コスト', '調達物流', '物流拠点', '荷役・包装', '国際物流', '物流情報システム', '物流品質', '需要予測', '環境・安全対策'] },
+    { id: 'system',   icon: '💻', name: '経営情報システム',    sub: 'IT戦略・システム企画・セキュリティ', grades: ['3','2','1'],     areas: ['経営情報システム'],
+      topics: ['IT戦略', 'システム企画', '要件定義', 'システム開発', 'プロジェクト管理', 'システム運用', '情報セキュリティ', 'ネットワーク', 'データベース', 'クラウド', 'ITガバナンス', '個人情報保護', '業務プロセス', 'システム投資評価', 'DX'] },
+    { id: 'senryaku', icon: '🎯', name: '経営戦略',            sub: '経営分析・戦略立案・組織管理',   grades: ['3','2','1'],       areas: ['経営戦略'],
+      topics: ['経営戦略', '事業戦略', '競争戦略', '経営環境分析', 'SWOT分析', '経営分析', '財務分析', '組織構造', '組織管理', '経営計画', '経営理念', 'コーポレート・ガバナンス', 'CSR', 'M&A', 'イノベーション'] },
   ];
+
+  // ── 表記統一：テーマ名・選択肢の正規化 ──────────────
+  // 略称 → 正式名称（NFKC正規化後の形で記述）
+  const TOPIC_ALIASES = {
+    '労基法': '労働基準法', '労契法': '労働契約法', '労安衛法': '労働安全衛生法',
+    'BS': '貸借対照表', 'B/S': '貸借対照表', 'PL': '損益計算書', 'P/L': '損益計算書',
+    'CF': 'キャッシュ・フロー計算書', 'C/F': 'キャッシュ・フロー計算書', 'キャッシュフロー計算書': 'キャッシュ・フロー計算書',
+    'SWOT': 'SWOT分析', '個人情報保護法': '個人情報保護', '知財': '知的財産権', '知的財産': '知的財産権',
+    '企業の社会的責任': 'CSR', 'ガバナンス': 'コーポレート・ガバナンス', 'コーポレートガバナンス': 'コーポレート・ガバナンス',
+  };
+  const _topicIndex = new WeakMap();
+  const topicKey = str => str.replace(/[・\s]/g, ''); // 「・」「空白」の有無を無視して比較
+
+  function topicIndex(field) {
+    if (!_topicIndex.has(field)) _topicIndex.set(field, new Map(field.topics.map(t => [topicKey(t), t])));
+    return _topicIndex.get(field);
+  }
+
+  // テーマ名を推奨テーマの表記に揃える（field 省略時は一般的な整形のみ）
+  function normalizeTopic(raw, field) {
+    if (typeof raw !== 'string') return '';
+    let t = raw.normalize('NFKC').trim();               // 全角英数・記号を半角へ
+    t = t.replace(/[「」『』"']/g, '');
+    t = t.replace(/\s*[(\[].*?[)\]]\s*/g, '');          // 括弧書きを除去
+    t = t.split(/[、,;]/)[0].trim();                     // 複数併記は先頭のみ
+    const stripped = t.replace(/(について|に関する(?:知識|問題|事項)?|の(?:基本|基礎|概要|知識)|等|など)$/, '');
+    if (stripped.length >= 2) t = stripped;
+    if (/[぀-ヿ一-鿿]/.test(t)) t = t.replace(/\s+/g, '');
+    if (TOPIC_ALIASES[t]) t = TOPIC_ALIASES[t];
+
+    if (field && Array.isArray(field.topics)) {
+      const idx = topicIndex(field);
+      const key = topicKey(t);
+      if (idx.has(key)) return idx.get(key);
+      // 推奨テーマで始まる場合は寄せる（例：「労働基準法の時間外労働」→「労働基準法」）。複数該当は最長を採用
+      const heads = [...idx.entries()].filter(([k]) => k.length >= 3 && key.startsWith(k)).sort((a, b) => b[0].length - a[0].length);
+      if (heads.length) return heads[0][1];
+    }
+    return t.slice(0, 20);
+  }
+
+  // 選択肢の先頭に付いた「A.」「ア．」などの記号を除去（アプリ側で A〜D を付けるため）
+  function stripChoiceLabel(c) {
+    return c.replace(/^\s*[A-Da-dＡ-Ｄ][.．)）:：]\s*/, '').replace(/^\s*[ア-エ][.．)）:：]\s*/, '').trim();
+  }
 
   // ── 状態 ──────────────────────────────────────
   const defaultState = () => ({ history: [], totalAnswered: 0, totalCorrect: 0 });
@@ -485,6 +538,13 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       if (parsed && Array.isArray(parsed.history)) {
+        // 既存データのテーマ名も表記を統一
+        parsed.history.forEach(h => {
+          const f = FIELDS.find(x => x.id === h.field);
+          (Array.isArray(h.questions) ? h.questions : []).forEach(q => {
+            if (q && typeof q.topic === 'string' && q.topic) q.topic = normalizeTopic(q.topic, f);
+          });
+        });
         parsed.history = slimHistory(parsed.history, DETAIL_KEEP); // 既存データも軽量化
         return parsed;
       }
@@ -941,7 +1001,7 @@ ${levelDesc}
       "choices": ["選択肢A", "選択肢B", "選択肢C", "選択肢D"],
       "answer": 0,
       "explanation": "正解の解説（なぜその選択肢が正しいか、関連する知識も含めて150字程度）",
-      "topic": "このテーマのキーワード（例：労働基準法・貸借対照表など）"
+      "topic": "推奨テーマから1つ"
     }
   ]
 }
@@ -950,7 +1010,17 @@ ${levelDesc}
 - answerは0始まりのインデックス（0〜3）
 - 選択肢は「適切なものはどれか」「不適切なものはどれか」どちらも混在させる
 - 実際のビジキャリ試験で出題されうる本格的な内容にする
-- JSONのみ出力、マークダウン記法は使わない`;
+- JSONのみ出力、マークダウン記法は使わない
+
+【topicの付け方】
+- 次の推奨テーマから最も近いものを1つ、一字一句そのまま使う：${field.topics.join('、')}
+- どれにも当てはまらない場合のみ、一般的な正式名称の名詞を1つ（15字以内）で付ける
+- 略称、括弧書き、「〜について」「〜に関する」、複数テーマの併記は使わない
+
+【表記】
+- 法令・制度・用語は正式名称で書く（例：労基法ではなく労働基準法）
+- 数字と英字は半角で書く
+- 選択肢は文末の形（である調など）をそろえ、先頭に「A.」「ア」などの記号を付けない`;
 
     // 余裕を持って多めに依頼し、検証で落ちた分を吸収する
     const body = JSON.stringify({
@@ -1006,20 +1076,20 @@ ${levelDesc}
     }
 
     const valid = (Array.isArray(parsed?.questions) ? parsed.questions : [])
-      .map(normalizeQuestion)
+      .map(r => normalizeQuestion(r, field))
       .filter(Boolean);
     if (valid.length === 0) throw new QuizError('invalid');
     return valid.slice(0, count);
   }
 
   // ── 生成問題の検証・正規化（不正な問題は null → 除外） ──
-  function normalizeQuestion(raw) {
+  function normalizeQuestion(raw, field) {
     if (!raw || typeof raw !== 'object') return null;
     const q = typeof raw.q === 'string' ? raw.q.trim() : '';
     const explanation = typeof raw.explanation === 'string' ? raw.explanation.trim() : '';
     if (!q || !explanation) return null;
     if (!Array.isArray(raw.choices) || raw.choices.length !== 4) return null;
-    const choices = raw.choices.map(c => (typeof c === 'string' ? c.trim() : ''));
+    const choices = raw.choices.map(c => (typeof c === 'string' ? stripChoiceLabel(c) : ''));
     if (choices.some(c => !c) || new Set(choices).size !== 4) return null;
     const answer = Number(raw.answer);
     if (!Number.isInteger(answer) || answer < 0 || answer > 3) return null;
@@ -1031,7 +1101,7 @@ ${levelDesc}
       choices: order.map(i => choices[i]),
       answer: order.indexOf(answer),
       explanation,
-      topic: typeof raw.topic === 'string' ? raw.topic.trim() : '',
+      topic: normalizeTopic(raw.topic, field),
     };
   }
 
