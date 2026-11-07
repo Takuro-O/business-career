@@ -61,6 +61,14 @@ export async function generate({ field, grade, target = 100, apiKey, fetchImpl =
   const TIMEOUT_DECL = 'const REQUEST_TIMEOUT_MS = 90000;';
   if (!html.includes(TIMEOUT_DECL)) throw new Error('REQUEST_TIMEOUT_MS の宣言が見つかりません');
   html = html.replace(TIMEOUT_DECL, 'const REQUEST_TIMEOUT_MS = 300000;');
+  // 使うモデルを環境変数 GEMINI_MODELS（カンマ区切り）で差し替えられる
+  const MODELS_RE = /const MODELS\s*=\s*\[[^\]]*\];/;
+  if (process.env.GEMINI_MODELS) {
+    if (!MODELS_RE.test(html)) throw new Error('MODELS の宣言が見つかりません');
+    const list = process.env.GEMINI_MODELS.split(',').map(x => x.trim()).filter(Boolean);
+    html = html.replace(MODELS_RE, `const MODELS = ${JSON.stringify(list)};`);
+    log('使用モデル: ' + list.join(', '));
+  }
   // API呼び出しごとの所要時間とトークン数を記録（遅さの原因調べ用）
   const rawFetch = fetchImpl;
   fetchImpl = async (url, opts) => {

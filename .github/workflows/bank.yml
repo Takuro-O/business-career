@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '17 19 * * *'   # 毎日 日本時間 4:17（Googleの1日枠が戻った後）
   workflow_dispatch:
+    inputs:
+      models:
+        description: '使うモデル（カンマ区切り。空ならアプリの既定）'
+        required: false
+        default: ''
+      target:
+        description: '目標問数'
+        required: false
+        default: '100'
 
 permissions:
   contents: write
@@ -21,7 +30,8 @@ jobs:
       - name: 問題を生成（目標に届くまで毎日少しずつ追加）
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: node tools/generate-bank.mjs jinzai 3 100
+          GEMINI_MODELS: ${{ inputs.models }}
+        run: node tools/generate-bank.mjs jinzai 3 ${{ inputs.target || 100 }}
       - name: 変更をコミット
         run: |
           git config user.name "github-actions[bot]"
