@@ -211,6 +211,7 @@
       <div style="padding:16px 16px 8px;">
         <p style="font-size:var(--fs-base);color:var(--c-sub);">分野を選んで問題を解こう</p>
       </div>
+      <div id="resume-banner"></div>
       <div id="today-stats" style="display:flex;gap:10px;padding:0 16px 20px;"></div>
       <div id="category-list" role="list"></div>
     </div>
@@ -377,6 +378,8 @@
   // 優先モデル → 利用不可(404)の場合は次のモデルへフォールバック
   const MODELS      = ['gemini-3.8-flash', 'gemini-3.6-flash'];
   const MAX_HISTORY = 100;
+  const DETAIL_KEEP = 20;   // 問題文まで保存する直近セッション数（履歴画面に表示する件数と同じ）
+  const PROGRESS_KEY = 'bizcareer_quiz_progress_v1'; // 解答中クイズの途中保存
   const LABELS      = ['A', 'B', 'C', 'D'];
 
   // 8分野定義（ユーザー操作で書き換わらない定数）
@@ -406,18 +409,78 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed && Array.isArray(parsed.history)) return parsed;
+      if (parsed && Array.isArray(parsed.history)) {
+        parsed.history = slimHistory(parsed.history, DETAIL_KEEP); // 既存データも軽量化
+        return parsed;
+      }
       return defaultState();
     } catch { return defaultState(); }
+  }
+
+  // 古い履歴は問題文・選択肢・解説を捨て、苦手テーマ集計に必要な topic / isRight だけ残す
+  function slimHistory(history, keep) {
+    return history.map((h, i) => {
+      if (i < keep || h.slim || !Array.isArray(h.questions)) return h;
+      return {
+        ...h,
+        slim: true,
+        questions: h.questions.map(q => ({ topic: q.topic || '', isRight: q.isRight })),
+      };
+    });
   }
 
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
-      if (e.name === 'QuotaExceededError')
-        showToast('保存容量が不足しています。古い履歴を削除してください。', 'error');
+      if (e.name !== 'QuotaExceededError') return;
+      // 容量不足：詳細を残す件数をさらに減らして1回だけ再試行
+      try {
+        state.history = slimHistory(state.history, 5);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e2) {
+        showToast('保存容量が不足しています。成績のリセットをお試しください。', 'error');
+      }
     }
+  }
+
+  // ── 解答中クイズの途中保存 ─────────────────────
+  function saveProgress() {
+    try {
+      if (!quizSession.field || !quizSession.questions.length) return;
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+        fieldId:   quizSession.field.id,
+        grade:     quizSession.grade,
+        count:     quizSession.count,
+        questions: quizSession.questions,
+        current:   quizSession.current,
+        answers:   quizSession.answers,
+        isReview:  !!quizSession.isReview,
+        savedAt:   Date.now(),
+      }));
+    } catch (e) { /* 保存できなくてもクイズは続行できる */ }
+  }
+
+  function clearProgress() {
+    try { localStorage.removeItem(PROGRESS_KEY); } catch (e) { /* noop */ }
+  }
+
+  // 保存データが壊れていないか検証して返す（不正なら破棄して null）
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      const field = FIELDS.find(f => f.id === p?.fieldId);
+      const okQs = Array.isArray(p?.questions) && p.questions.length > 0 && p.questions.every(q =>
+        q && typeof q.q === 'string' && Array.isArray(q.choices) && q.choices.length === 4 &&
+        Number.isInteger(q.answer) && q.answer >= 0 && q.answer < 4 && typeof q.explanation === 'string');
+      const okAns = Array.isArray(p?.answers) && p.answers.every(a => a && Number.isInteger(a.chosen) && typeof a.isRight === 'boolean');
+      const okIdx = okQs && okAns && Number.isInteger(p.current) && p.current >= 0 && p.current < p.questions.length &&
+        (p.answers.length === p.current || p.answers.length === p.current + 1);
+      if (!field || !okQs || !okAns || !okIdx) { clearProgress(); return null; }
+      return { ...p, field };
+    } catch (e) { clearProgress(); return null; }
   }
 
   // ── XSSエスケープ（[CRITICAL修正] 全箇所に適用） ──
@@ -494,8 +557,65 @@
 
   // ── ホーム描画 ─────────────────────────────────
   function renderHome() {
+    renderResumeBanner();
     renderTodayStats();
     renderCategoryList();
+  }
+
+  // 解答中のクイズがあれば「続きから」バナーを表示
+  function renderResumeBanner() {
+    const el = document.getElementById('resume-banner');
+    el.innerHTML = '';
+    const p = loadProgress();
+    if (!p) return;
+
+    const gradeLabel = p.grade === 'BASIC' ? 'BASIC級' : p.grade + '級';
+    const answered = p.answers.length;
+
+    const box = document.createElement('div');
+    box.style.cssText = 'margin:0 16px 16px;padding:14px;border-radius:var(--radius-m);background:var(--c-primary-light);border:1.5px solid var(--c-primary);';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:var(--fs-base);font-weight:700;color:var(--c-primary);margin-bottom:2px;';
+    title.textContent = '解答中のクイズがあります';
+
+    const desc = document.createElement('div');
+    desc.style.cssText = 'font-size:var(--fs-sm);color:var(--c-text);margin-bottom:12px;';
+    desc.textContent = `${p.field.icon} ${p.field.name} ${gradeLabel}${p.isReview ? '（復習）' : ''} ／ ${p.questions.length}問中${answered}問回答済み`;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;';
+
+    const resumeBtn = document.createElement('button');
+    resumeBtn.className = 'tappable';
+    resumeBtn.textContent = '続きから';
+    resumeBtn.style.cssText = 'flex:2;height:44px;background:var(--c-primary);color:#fff;border-radius:var(--radius-s);font-size:var(--fs-md);font-weight:700;';
+    resumeBtn.onclick = resumeQuiz;
+
+    const discardBtn = document.createElement('button');
+    discardBtn.className = 'tappable';
+    discardBtn.textContent = '破棄';
+    discardBtn.style.cssText = 'flex:1;height:44px;background:var(--c-bg);color:var(--c-sub);border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:var(--fs-md);font-weight:600;';
+    discardBtn.onclick = () => { clearProgress(); renderResumeBanner(); showToast('破棄しました', 'info'); };
+
+    row.appendChild(resumeBtn);
+    row.appendChild(discardBtn);
+    box.appendChild(title);
+    box.appendChild(desc);
+    box.appendChild(row);
+    el.appendChild(box);
+  }
+
+  function resumeQuiz() {
+    const p = loadProgress();
+    if (!p) { renderResumeBanner(); return; }
+    Object.assign(quizSession, {
+      field: p.field, grade: p.grade, count: p.count,
+      questions: p.questions, current: p.current, answers: p.answers, isReview: p.isReview,
+    });
+    showPage('quiz');
+    renderQuestion();
+    document.querySelector('main').scrollTop = 0;
   }
 
   function renderTodayStats() {
@@ -705,6 +825,7 @@
     try {
       const questions = await generateQuestions(quizSession.field, quizSession.grade, quizSession.count);
       quizSession.questions = questions;
+      saveProgress();
       hideLoading();
       showPage('quiz');
       renderQuestion();
@@ -932,13 +1053,25 @@ ${levelDesc}
 
     document.getElementById('quiz-explanation').style.display = 'none';
     document.getElementById('quiz-nav').style.display = 'none';
+
+    // 途中再開：この問題がすでに回答済みなら、回答後の表示を復元する
+    if (quizSession.answers.length > idx) showAnswerUI(q, quizSession.answers[idx].chosen);
   }
 
   function handleAnswer(chosenIdx) {
+    // 二重タップ防止（回答済みの問題には答えられない）
+    if (quizSession.answers.length > quizSession.current) return;
     const q       = quizSession.questions[quizSession.current];
     const isRight = chosenIdx === q.answer;
     quizSession.answers.push({ chosen: chosenIdx, correct: q.answer, isRight });
+    saveProgress();
     haptic(isRight ? 'light' : 'heavy');
+    showAnswerUI(q, chosenIdx);
+  }
+
+  // 回答後の表示（正誤の色分け・解説・次へボタン）。回答時と途中再開時で共通
+  function showAnswerUI(q, chosenIdx) {
+    const isRight = chosenIdx === q.answer;
 
     // ボタン状態更新
     document.querySelectorAll('.choice-btn').forEach((btn, i) => {
@@ -990,6 +1123,7 @@ ${levelDesc}
 
   function nextQuestion() {
     quizSession.current++;
+    saveProgress();
     renderQuestion();
     document.querySelector('main').scrollTop = 0;
   }
@@ -1015,6 +1149,8 @@ ${levelDesc}
 
     state.history.unshift(record);
     if (state.history.length > MAX_HISTORY) state.history = state.history.slice(0, MAX_HISTORY);
+    state.history = slimHistory(state.history, DETAIL_KEEP);
+    clearProgress();
     state.totalAnswered = (state.totalAnswered || 0) + record.count;
     state.totalCorrect  = (state.totalCorrect  || 0) + correct;
     saveState();
@@ -1041,6 +1177,7 @@ ${levelDesc}
   }
   function doQuitQuiz() {
     closeQuitDialog();
+    clearProgress();
     showPage('home');
   }
 
@@ -1137,6 +1274,7 @@ ${levelDesc}
       field: f, grade: record.grade, count: qs.length,
       questions: qs, current: 0, answers: [], isReview: true,
     });
+    saveProgress();
     showPage('quiz');
     renderQuestion();
     document.querySelector('main').scrollTop = 0;
@@ -1166,6 +1304,7 @@ ${levelDesc}
         <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(gradeLabel)} ／ ${esc(dateStr)} ／ ${record.count}問中${record.correct}問正解（${rate}%）</div>
       </div>
       <div id="detail-review-wrap"></div>
+      ${record.slim ? `<div style="text-align:center;padding:32px 16px;color:var(--c-sub);font-size:var(--fs-base);line-height:1.7;">この履歴は古いため、問題文と解説は保存されていません。<br>（直近${DETAIL_KEEP}セッション分のみ保存されます。成績・苦手テーマの集計には反映されています）</div>` : `
       <p style="font-size:var(--fs-xs);color:var(--c-sub);margin:12px 0;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</p>
       ${qs.map((q, n) => {
         const choices = Array.isArray(q.choices) ? q.choices : [];
@@ -1184,11 +1323,11 @@ ${levelDesc}
             }).join('')}
             <p style="font-size:var(--fs-sm);color:#374151;margin-top:8px;line-height:1.7;">${esc(q.explanation)}</p>
           </div>`;
-      }).join('')}
+      }).join('')}`}
     `;
 
     document.getElementById('detail-back').onclick = () => showPage('stats');
-    if (wrong.length > 0) document.getElementById('detail-review-wrap').appendChild(makeReviewButton(record, wrong.length));
+    if (wrong.length > 0 && !record.slim) document.getElementById('detail-review-wrap').appendChild(makeReviewButton(record, wrong.length));
   }
 
   // ── 苦手テーマ集計 ─────────────────────────────
