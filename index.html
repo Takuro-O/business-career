@@ -5,23 +5,43 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-title" content="ビジキャリ">
+  <meta name="description" content="ビジネス・キャリア検定の対策に。AIが分野・等級に合わせた問題を生成し、成績・苦手テーマ・復習まで管理できる無料の問題集アプリ。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ビジキャリ 問題集">
+  <meta property="og:description" content="AIが問題を生成。成績・苦手テーマ・復習まで管理できるビジネス・キャリア検定の問題集。">
+  <meta property="og:image" content="https://takuro-o.github.io/business-career/icons/icon-512.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <title>ビジキャリ 問題集</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%233B82F6'/><text y='.9em' font-size='68' x='50%' dominant-baseline='middle' text-anchor='middle'>📝</text></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%233B82F6'/><text y='.9em' font-size='68' x='50%' dominant-baseline='middle' text-anchor='middle'>📝</text></svg>">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <style>
     /* ── デザイントークン ── */
     :root {
+      color-scheme: light dark;
       --c-bg: #ffffff;
       --c-surface: #f8f9fa;
-      --c-border: #eeeeee;
+      --c-border: #e5e7eb;
       --c-text: #1a1a1a;
-      --c-sub: #888888;
-      --c-primary: #3B82F6;
+      --c-text-2: #374151;
+      --c-sub: #6b7280;               /* 白背景で 4.8:1（旧 #888 は 3.5:1 で不足） */
+      --c-primary: #2563eb;           /* 塗り・白文字ボタン用（白文字で 5.2:1） */
+      --c-primary-text: #2563eb;      /* 文字色用 */
       --c-primary-light: #eff6ff;
-      --c-danger: #ef4444;
-      --c-success: #22c55e;
-      --c-warning: #f59e0b;
+      --c-danger: #dc2626;
+      --c-danger-solid: #dc2626;
+      --c-success: #15803d;
+      --c-warning: #b45309;
+
+      --c-ok-bg: #f0fdf4;  --c-ok-text: #166534;  --c-ok-grad1: #d1fae5;  --c-ok-grad2: #a7f3d0;
+      --c-ng-bg: #fef2f2;  --c-ng-text: #991b1b;  --c-ng-grad1: #fee2e2;  --c-ng-grad2: #fecaca;
+      --c-warn-bg: #fffbeb;
+      --c-glass: rgba(255,255,255,0.92);
+      --c-handle: #dddddd;
 
       --radius-s: 8px;
       --radius-m: 12px;
@@ -30,12 +50,12 @@
       --shadow-card: 0 1px 4px rgba(0,0,0,0.07);
       --shadow-modal: 0 -4px 24px rgba(0,0,0,0.10);
 
-      /* [MINOR修正] アニメーション時間を変数化 */
+      /* アニメーション時間 */
       --dur-fast: 0.18s;
       --dur-normal: 0.25s;
       --dur-slow: 0.4s;
 
-      /* [MINOR修正] フォントサイズを変数化 */
+      /* フォントサイズ */
       --fs-xs: 11px;
       --fs-sm: 12px;
       --fs-base: 14px;
@@ -51,6 +71,32 @@
       --z-confirm: 250;
       --z-loading: 300;
       --z-toast: 999;
+    }
+
+    /* ── ダークモード（端末の設定に自動追従） ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --c-bg: #0f1115;
+        --c-surface: #1a1d24;
+        --c-border: #2b303a;
+        --c-text: #e8eaed;
+        --c-text-2: #d1d5db;
+        --c-sub: #9ca3af;
+        --c-primary-text: #60a5fa;
+        --c-primary-light: #14233f;
+        --c-danger: #f87171;
+        --c-success: #4ade80;
+        --c-warning: #fbbf24;
+
+        --c-ok-bg: #0f2a1a;  --c-ok-text: #86efac;  --c-ok-grad1: #0f2a1a;  --c-ok-grad2: #14532d;
+        --c-ng-bg: #2d1313;  --c-ng-text: #fca5a5;  --c-ng-grad1: #2d1313;  --c-ng-grad2: #4c1d1d;
+        --c-warn-bg: #2e2410;
+        --c-glass: rgba(15,17,21,0.92);
+        --c-handle: #444a55;
+
+        --shadow-card: 0 1px 4px rgba(0,0,0,0.5);
+        --shadow-modal: 0 -4px 24px rgba(0,0,0,0.6);
+      }
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -116,7 +162,7 @@
       font-size: var(--fs-xs); color: var(--c-sub);
       position: relative;
     }
-    .nav-btn.active { color: var(--c-primary); }
+    .nav-btn.active { color: var(--c-primary-text); }
     .nav-btn .nav-icon { font-size: 22px; }
 
     /* 選択肢ボタン */
@@ -132,9 +178,11 @@
       touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     }
     .choice-btn:active:not(:disabled) { transform: scale(0.98); }
-    .choice-btn.correct   { border-color: var(--c-success); background: #f0fdf4; color: #166534; }
-    .choice-btn.incorrect { border-color: var(--c-danger);  background: #fef2f2; color: #991b1b; }
+    .choice-btn.correct   { border-color: var(--c-success); background: var(--c-ok-bg); color: var(--c-ok-text); }
+    .choice-btn.incorrect { border-color: var(--c-danger);  background: var(--c-ng-bg); color: var(--c-ng-text); }
     .choice-btn:disabled  { cursor: default; }
+    /* 回答後の未選択の選択肢：ブラウザ既定の薄いグレーにせず、読める色を維持 */
+    .choice-btn:disabled:not(.correct):not(.incorrect) { color: var(--c-text-2); opacity: 0.75; }
 
     /* プログレスバー */
     .progress-bar  { height: 4px; background: var(--c-border); border-radius: 2px; overflow: hidden; margin: 0 16px 16px; }
@@ -145,14 +193,14 @@
       background: var(--c-surface); border-radius: var(--radius-m);
       padding: 16px; text-align: center; flex: 1;
     }
-    .stat-num   { font-size: var(--fs-stat); font-weight: 700; color: var(--c-primary); }
+    .stat-num   { font-size: var(--fs-stat); font-weight: 700; color: var(--c-primary-text); }
     .stat-label { font-size: var(--fs-sm); color: var(--c-sub); margin-top: 2px; }
 
     /* タグ */
     .tag {
       display: inline-block; padding: 3px 10px; border-radius: 20px;
       font-size: var(--fs-sm); font-weight: 600;
-      background: var(--c-primary-light); color: var(--c-primary);
+      background: var(--c-primary-light); color: var(--c-primary-text);
     }
 
     /* カテゴリカード */
@@ -192,19 +240,40 @@
       outline-offset: 2px;
       border-radius: var(--radius-s);
     }
+
+    /* 回答フィードバック演出 */
+    @keyframes pulseCorrect { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+    .choice-btn.correct   { animation: pulseCorrect 0.35s ease; }
+    .choice-btn.incorrect { animation: shake 0.3s ease; }
+
+    #quiz-question:focus, main:focus { outline: none; }
+
+    /* キー操作ヒント（マウス・キーボード環境のみ表示） */
+    .kbd-hint { display: none; font-size: var(--fs-xs); color: var(--c-sub); text-align: center; margin-top: 8px; }
+    @media (hover: hover) and (pointer: fine) { .kbd-hint { display: block; } }
+
+    /* 「視差・動きを減らす」設定を尊重（ローディングの回転だけは遅くして維持） */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+      }
+      .spinner { animation-duration: 1.6s !important; animation-iteration-count: infinite !important; }
+    }
   </style>
 </head>
 <body>
 <div id="app">
 
   <!-- ヘッダー -->
-  <header id="main-header" role="banner" style="position:sticky;top:0;z-index:var(--z-nav);background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--c-border);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;">
+  <header id="main-header" role="banner" style="position:sticky;top:0;z-index:var(--z-nav);background:var(--c-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--c-border);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;">
     <h1 id="header-title" style="font-size:var(--fs-2xl);font-weight:700;">ビジキャリ 問題集</h1>
     <div id="header-actions"></div>
   </header>
 
   <!-- メインコンテンツ -->
-  <main role="main" style="flex:1;overflow-y:auto;padding:16px 0 calc(72px + env(safe-area-inset-bottom));">
+  <main role="main" tabindex="-1" style="flex:1;overflow-y:auto;padding:16px 0 calc(72px + env(safe-area-inset-bottom));">
 
     <!-- ホーム -->
     <div id="page-home" class="page active" role="region" aria-label="ホーム">
@@ -222,16 +291,17 @@
       <div style="display:flex;align-items:center;padding:12px 16px 0;gap:8px;">
         <button class="tappable" id="quiz-back-btn" aria-label="ホームに戻る"
           style="width:36px;height:36px;border-radius:50%;background:var(--c-surface);border:none;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">←</button>
-        <div class="progress-bar" style="flex:1;margin:0;">
+        <div class="progress-bar" id="quiz-progress-bar" role="progressbar" aria-label="進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;margin:0;">
           <div class="progress-fill" id="quiz-progress" style="width:0%"></div>
         </div>
         <span id="quiz-counter" style="font-size:var(--fs-sm);color:var(--c-sub);font-weight:600;white-space:nowrap;"></span>
       </div>
       <div style="padding:12px 16px 0;">
         <div id="quiz-meta" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px;"></div>
-        <div id="quiz-question" style="font-size:var(--fs-xl);font-weight:600;line-height:1.6;margin-bottom:20px;" role="heading" aria-level="2"></div>
+        <div id="quiz-question" tabindex="-1" style="font-size:var(--fs-xl);font-weight:600;line-height:1.6;margin-bottom:20px;" role="heading" aria-level="2"></div>
         <div id="quiz-choices" role="group" aria-label="選択肢"></div>
-        <div id="quiz-explanation" style="display:none;margin-top:4px;padding:14px;background:var(--c-surface);border-radius:var(--radius-m);font-size:var(--fs-base);line-height:1.7;color:#374151;" role="alert"></div>
+        <p class="kbd-hint" aria-hidden="true">キー操作：1〜4（またはA〜D）で回答 ／ Enter で次へ</p>
+        <div id="quiz-explanation" style="display:none;margin-top:4px;padding:14px;background:var(--c-surface);border-radius:var(--radius-m);font-size:var(--fs-base);line-height:1.7;color:var(--c-text-2);" role="status" aria-live="polite"></div>
         <div id="quiz-nav" style="display:none;margin-top:16px;margin-bottom:8px;"></div>
       </div>
     </div>
@@ -258,6 +328,10 @@
     <div id="page-stats" class="page" role="region" aria-label="成績">
       <div style="padding:16px;">
         <div style="display:flex;gap:10px;margin-bottom:20px;" id="overall-stats"></div>
+        <div id="grade-stats-wrap" style="display:none;">
+          <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">等級別 正答率</p>
+          <div id="grade-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;"></div>
+        </div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:12px;">分野別 正答率</p>
         <div id="field-stats"></div>
         <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin:20px 0 4px;">苦手テーマ</p>
@@ -277,7 +351,7 @@
   </main>
 
   <!-- ボトムナビ -->
-  <nav role="navigation" aria-label="メインナビゲーション" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--c-border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:var(--z-nav);">
+  <nav role="navigation" aria-label="メインナビゲーション" style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--c-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--c-border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:var(--z-nav);">
     <button class="nav-btn tappable active" data-page="home" onclick="showPage('home')"
       aria-label="ホーム" aria-current="page">
       <span class="nav-icon" aria-hidden="true">🏠</span><span>ホーム</span>
@@ -295,7 +369,7 @@
   <div onclick="closeConfigModal()" aria-hidden="true"
     style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
   <div style="position:relative;width:100%;max-width:430px;background:var(--c-bg);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:24px 16px calc(24px + env(safe-area-inset-bottom));max-height:88dvh;overflow-y:auto;box-shadow:var(--shadow-modal);animation:slideUp var(--dur-normal) ease;">
-    <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 20px;" aria-hidden="true"></div>
+    <div style="width:36px;height:4px;background:var(--c-handle);border-radius:2px;margin:0 auto 20px;" aria-hidden="true"></div>
     <div id="config-modal-title" style="font-size:var(--fs-2xl);font-weight:700;margin-bottom:4px;"></div>
     <div id="config-desc" style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:20px;"></div>
 
@@ -305,7 +379,7 @@
     <p style="font-size:var(--fs-base);font-weight:600;color:var(--c-sub);margin-bottom:8px;" id="count-label">問題数</p>
     <div style="display:flex;gap:8px;margin-bottom:24px;" id="count-selector" role="group" aria-labelledby="count-label">
       <button class="tappable count-opt" data-n="5"  onclick="selectCount(5)"  aria-pressed="false" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-bg);font-size:var(--fs-base);font-weight:600;color:var(--c-sub);">5問</button>
-      <button class="tappable count-opt" data-n="10" onclick="selectCount(10)" aria-pressed="true"  style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-primary);background:var(--c-primary-light);font-size:var(--fs-base);font-weight:600;color:var(--c-primary);">10問</button>
+      <button class="tappable count-opt" data-n="10" onclick="selectCount(10)" aria-pressed="true"  style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-primary);background:var(--c-primary-light);font-size:var(--fs-base);font-weight:600;color: var(--c-primary-text);">10問</button>
       <button class="tappable count-opt" data-n="15" onclick="selectCount(15)" aria-pressed="false" style="flex:1;height:40px;border-radius:var(--radius-s);border:1.5px solid var(--c-border);background:var(--c-bg);font-size:var(--fs-base);font-weight:600;color:var(--c-sub);">15問</button>
     </div>
 
@@ -328,12 +402,12 @@
   <div onclick="closeConfirm()" aria-hidden="true"
     style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
   <div style="position:relative;width:100%;max-width:430px;background:var(--c-bg);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:24px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow-modal);animation:slideUp var(--dur-normal) ease;">
-    <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px;" aria-hidden="true"></div>
+    <div style="width:36px;height:4px;background:var(--c-handle);border-radius:2px;margin:0 auto 16px;" aria-hidden="true"></div>
     <p id="confirm-title" style="font-size:var(--fs-lg);font-weight:700;margin-bottom:6px;"></p>
     <p id="confirm-msg"   style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:24px;"></p>
     <button id="confirm-ok" class="tappable"
-      style="width:100%;height:48px;background:var(--c-danger);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:600;margin-bottom:10px;"></button>
-    <button onclick="closeConfirm()" class="tappable"
+      style="width:100%;height:48px;background:var(--c-danger-solid);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:600;margin-bottom:10px;"></button>
+    <button data-autofocus onclick="closeConfirm()" class="tappable"
       style="width:100%;height:44px;background:transparent;color:var(--c-sub);border:none;font-size:var(--fs-lg);">キャンセル</button>
   </div>
 </div>
@@ -344,20 +418,20 @@
   <div onclick="closeQuitDialog()" aria-hidden="true"
     style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"></div>
   <div style="position:relative;width:100%;max-width:430px;background:var(--c-bg);border-radius:var(--radius-l) var(--radius-l) 0 0;padding:24px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow-modal);animation:slideUp var(--dur-normal) ease;">
-    <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px;" aria-hidden="true"></div>
+    <div style="width:36px;height:4px;background:var(--c-handle);border-radius:2px;margin:0 auto 16px;" aria-hidden="true"></div>
     <p id="quit-title" style="font-size:var(--fs-lg);font-weight:700;margin-bottom:6px;">中断しますか？</p>
     <p style="font-size:var(--fs-base);color:var(--c-sub);margin-bottom:24px;">進行中の問題は保存されません。</p>
     <button class="tappable" onclick="doQuitQuiz()"
-      style="width:100%;height:48px;background:var(--c-danger);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:600;margin-bottom:10px;">中断してホームへ</button>
-    <button onclick="closeQuitDialog()" class="tappable"
+      style="width:100%;height:48px;background:var(--c-danger-solid);color:#fff;border:none;border-radius:var(--radius-s);font-size:var(--fs-lg);font-weight:600;margin-bottom:10px;">中断してホームへ</button>
+    <button data-autofocus onclick="closeQuitDialog()" class="tappable"
       style="width:100%;height:44px;background:transparent;color:var(--c-sub);border:none;font-size:var(--fs-lg);">問題に戻る</button>
   </div>
 </div>
 
 <!-- ローディング -->
 <div id="loading-overlay" role="status" aria-live="polite" aria-label="問題を生成しています"
-  style="display:none;position:fixed;inset:0;z-index:var(--z-loading);background:rgba(255,255,255,0.92);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
-  <div aria-hidden="true" style="width:48px;height:48px;border:4px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  style="display:none;position:fixed;inset:0;z-index:var(--z-loading);background:var(--c-glass);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div class="spinner" aria-hidden="true" style="width:48px;height:48px;border:4px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
   <p style="font-size:var(--fs-md);color:var(--c-sub);" id="loading-msg">AIが問題を生成中…</p>
 </div>
 
@@ -403,6 +477,7 @@
   let selectedCount = 10;
   let _isGenerating = false; // [MAJOR修正] ダブル送信防止フラグ
   let _confirmCb    = null;
+  let _booted       = false; // 初期化完了後のみフォーカス移動を行う
 
   // ── ストレージ ─────────────────────────────────
   function loadState() {
@@ -553,6 +628,8 @@
       actions.appendChild(resetBtn);
       renderStats();
     }
+
+    if (_booted && page !== 'quiz') document.querySelector('main').focus({ preventScroll: true });
   }
 
   // ── ホーム描画 ─────────────────────────────────
@@ -576,7 +653,7 @@
     box.style.cssText = 'margin:0 16px 16px;padding:14px;border-radius:var(--radius-m);background:var(--c-primary-light);border:1.5px solid var(--c-primary);';
 
     const title = document.createElement('div');
-    title.style.cssText = 'font-size:var(--fs-base);font-weight:700;color:var(--c-primary);margin-bottom:2px;';
+    title.style.cssText = 'font-size:var(--fs-base);font-weight:700;color: var(--c-primary-text);margin-bottom:2px;';
     title.textContent = '解答中のクイズがあります';
 
     const desc = document.createElement('div');
@@ -633,7 +710,7 @@
         <div class="stat-label">今日の問題数</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num" style="color:${answered > 0 && rate >= 60 ? 'var(--c-success)' : answered > 0 ? 'var(--c-danger)' : 'var(--c-primary)'}">${answered > 0 ? rate + '%' : '–'}</div>
+        <div class="stat-num" style="color:${answered > 0 && rate >= 60 ? 'var(--c-success)' : answered > 0 ? 'var(--c-danger)' : 'var(--c-primary-text)'}">${answered > 0 ? rate + '%' : '–'}</div>
         <div class="stat-label">今日の正答率</div>
       </div>
       <div class="stat-card">
@@ -752,12 +829,7 @@
     document.getElementById('config-modal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    // [MAJOR修正] ESC キーで閉じる
-    const ac = new AbortController();
-    document.getElementById('config-modal')._cleanup = () => ac.abort();
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeConfigModal();
-    }, { signal: ac.signal });
+    activateModal(document.getElementById('config-modal'), closeConfigModal);
 
     haptic();
   }
@@ -766,7 +838,7 @@
     const modal = document.getElementById('config-modal');
     modal.style.display = 'none';
     document.body.style.overflow = '';
-    modal._cleanup?.();
+    deactivateModal(modal);
   }
 
   function selectGrade(g) {
@@ -775,7 +847,7 @@
       const active = btn.dataset.g === g;
       btn.style.border     = active ? '1.5px solid var(--c-primary)' : '1.5px solid var(--c-border)';
       btn.style.background = active ? 'var(--c-primary-light)' : 'var(--c-bg)';
-      btn.style.color      = active ? 'var(--c-primary)' : 'var(--c-sub)';
+      btn.style.color      = active ? 'var(--c-primary-text)' : 'var(--c-sub)';
       btn.setAttribute('aria-pressed', String(active));
     });
     haptic();
@@ -787,7 +859,7 @@
       const active = parseInt(btn.dataset.n) === n;
       btn.style.border     = active ? '1.5px solid var(--c-primary)' : '1.5px solid var(--c-border)';
       btn.style.background = active ? 'var(--c-primary-light)' : 'var(--c-bg)';
-      btn.style.color      = active ? 'var(--c-primary)' : 'var(--c-sub)';
+      btn.style.color      = active ? 'var(--c-primary-text)' : 'var(--c-sub)';
       btn.setAttribute('aria-pressed', String(active));
     });
     haptic();
@@ -806,6 +878,7 @@
       showToast('Gemini APIキーを入力してください。', 'error');
       return;
     }
+    if (navigator.onLine === false) { showToast(ERROR_MESSAGES.network, 'error'); return; }
     _isGenerating = true;
 
     const btn = document.getElementById('start-btn');
@@ -995,6 +1068,9 @@ ${levelDesc}
     // プログレス & カウンター
     document.getElementById('quiz-progress').style.width = ((idx / total) * 100) + '%';
     document.getElementById('quiz-counter').textContent  = `${idx + 1} / ${total}`;
+    const bar = document.getElementById('quiz-progress-bar');
+    bar.setAttribute('aria-valuenow', String(Math.round(idx / total * 100)));
+    bar.setAttribute('aria-valuetext', `${idx + 1}問目 / 全${total}問`);
 
     // [MAJOR修正] 中断ボタンにイベントを付与
     const backBtn = document.getElementById('quiz-back-btn');
@@ -1020,7 +1096,7 @@ ${levelDesc}
 
     if (quizSession.isReview) {
       const reviewTag = document.createElement('span');
-      reviewTag.style.cssText = 'font-size:var(--fs-xs);font-weight:700;color:var(--c-warning);background:#fffbeb;padding:2px 8px;border-radius:10px;';
+      reviewTag.style.cssText = 'font-size:var(--fs-xs);font-weight:700;color:var(--c-warning);background:var(--c-warn-bg);padding:2px 8px;border-radius:10px;';
       reviewTag.textContent = '復習';
       metaEl.appendChild(reviewTag);
     }
@@ -1054,6 +1130,9 @@ ${levelDesc}
     document.getElementById('quiz-explanation').style.display = 'none';
     document.getElementById('quiz-nav').style.display = 'none';
 
+    // 問題が切り替わったことをスクリーンリーダーに伝えるため、問題文へフォーカス
+    if (_booted) questionEl.focus({ preventScroll: true });
+
     // 途中再開：この問題がすでに回答済みなら、回答後の表示を復元する
     if (quizSession.answers.length > idx) showAnswerUI(q, quizSession.answers[idx].chosen);
   }
@@ -1077,8 +1156,13 @@ ${levelDesc}
     document.querySelectorAll('.choice-btn').forEach((btn, i) => {
       btn.disabled = true;
       btn.removeAttribute('onclick');
-      if (i === q.answer)               btn.classList.add('correct');
-      else if (i === chosenIdx && !isRight) btn.classList.add('incorrect');
+      if (i === q.answer) {
+        btn.classList.add('correct');
+        btn.setAttribute('aria-label', btn.getAttribute('aria-label') + '（正解）');
+      } else if (i === chosenIdx && !isRight) {
+        btn.classList.add('incorrect');
+        btn.setAttribute('aria-label', btn.getAttribute('aria-label') + '（あなたの回答・不正解）');
+      }
     });
 
     // [CRITICAL修正] 解説 innerHTML は esc() 経由で安全に
@@ -1094,7 +1178,7 @@ ${levelDesc}
         <span style="font-weight:700;color:${resultColor}">${resultLabel}</span>
         ${correctNote}
       </div>
-      <div style="font-size:var(--fs-base);color:#374151;">${esc(q.explanation)}</div>
+      <div style="font-size:var(--fs-base);color:var(--c-text-2);">${esc(q.explanation)}</div>
       <div style="font-size:var(--fs-xs);color:var(--c-sub);margin-top:10px;">※AIが生成した内容です。誤りを含む場合があるため、公式テキスト等で確認してください。</div>
     `;
     expEl.style.display = 'block';
@@ -1118,7 +1202,7 @@ ${levelDesc}
     navEl.appendChild(navBtn);
     navEl.style.display = 'block';
 
-    setTimeout(() => expEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+    setTimeout(() => expEl.scrollIntoView({ behavior: (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth', block: 'nearest' }), 100);
   }
 
   function nextQuestion() {
@@ -1163,17 +1247,13 @@ ${levelDesc}
   function openQuitDialog() {
     document.getElementById('quit-dialog').style.display = 'flex';
     document.body.style.overflow = 'hidden';
-    const ac = new AbortController();
-    document.getElementById('quit-dialog')._cleanup = () => ac.abort();
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeQuitDialog();
-    }, { signal: ac.signal });
+    activateModal(document.getElementById('quit-dialog'), closeQuitDialog);
   }
   function closeQuitDialog() {
     const d = document.getElementById('quit-dialog');
     d.style.display = 'none';
     document.body.style.overflow = '';
-    d._cleanup?.();
+    deactivateModal(d);
   }
   function doQuitQuiz() {
     closeQuitDialog();
@@ -1188,12 +1268,12 @@ ${levelDesc}
 
     const circle = document.getElementById('result-circle');
     circle.style.background = passed
-      ? 'linear-gradient(135deg, #d1fae5, #a7f3d0)'
-      : 'linear-gradient(135deg, #fee2e2, #fecaca)';
+      ? 'linear-gradient(135deg, var(--c-ok-grad1), var(--c-ok-grad2))'
+      : 'linear-gradient(135deg, var(--c-ng-grad1), var(--c-ng-grad2))';
     // 数値のみ（外部データなし）なので直書き安全
     circle.innerHTML = `
-      <div style="font-size:36px;font-weight:900;color:${passed ? '#065f46' : '#991b1b'}">${rate}%</div>
-      <div style="font-size:var(--fs-base);color:${passed ? '#065f46' : '#991b1b'};font-weight:600;">${passed ? '合格ライン達成' : '要復習'}</div>
+      <div style="font-size:36px;font-weight:900;color:${passed ? 'var(--c-ok-text)' : 'var(--c-ng-text)'}">${rate}%</div>
+      <div style="font-size:var(--fs-base);color:${passed ? 'var(--c-ok-text)' : 'var(--c-ng-text)'};font-weight:600;">${passed ? '合格ライン達成' : '要復習'}</div>
     `;
 
     document.getElementById('result-msg').textContent = passed
@@ -1247,7 +1327,7 @@ ${levelDesc}
     btn.textContent = `🔁 間違えた${wrongCount}問を復習`;
     Object.assign(btn.style, {
       width: '100%', height: '48px', background: 'var(--c-primary-light)',
-      color: 'var(--c-primary)', border: '1.5px solid var(--c-primary)',
+      color: 'var(--c-primary-text)', border: '1.5px solid var(--c-primary)',
       borderRadius: 'var(--radius-s)', fontSize: 'var(--fs-md)', fontWeight: '700',
     });
     btn.onclick = () => startReview(record);
@@ -1298,9 +1378,9 @@ ${levelDesc}
     const gradeLabel = record.grade === 'BASIC' ? 'BASIC級' : record.grade + '級';
 
     body.innerHTML = `
-      <button id="detail-back" class="tappable" style="background:none;border:none;font-size:var(--fs-base);color:var(--c-primary);font-weight:600;padding:4px 0 12px;">← 成績に戻る</button>
+      <button id="detail-back" class="tappable" style="background:none;border:none;font-size:var(--fs-base);color: var(--c-primary-text);font-weight:600;padding:4px 0 12px;">← 成績に戻る</button>
       <div style="margin-bottom:16px;">
-        <div style="font-size:var(--fs-lg);font-weight:700;">${esc(record.fieldIcon)} ${esc(record.fieldName)}${record.review ? ' <span class="tag" style="color:var(--c-warning);background:#fffbeb;">復習</span>' : ''}</div>
+        <div style="font-size:var(--fs-lg);font-weight:700;">${esc(record.fieldIcon)} ${esc(record.fieldName)}${record.review ? ' <span class="tag" style="color:var(--c-warning);background:var(--c-warn-bg);">復習</span>' : ''}</div>
         <div style="font-size:var(--fs-sm);color:var(--c-sub);margin-top:2px;">${esc(gradeLabel)} ／ ${esc(dateStr)} ／ ${record.count}問中${record.correct}問正解（${rate}%）</div>
       </div>
       <div id="detail-review-wrap"></div>
@@ -1316,12 +1396,12 @@ ${levelDesc}
             ${choices.map((c, i) => {
               const isAns = i === q.answer;
               const isMine = i === q.userAnswer;
-              const color = isAns ? '#166534' : (isMine ? '#991b1b' : 'var(--c-text)');
-              const bg = isAns ? '#f0fdf4' : (isMine ? '#fef2f2' : 'var(--c-bg)');
+              const color = isAns ? 'var(--c-ok-text)' : (isMine ? 'var(--c-ng-text)' : 'var(--c-text)');
+              const bg = isAns ? 'var(--c-ok-bg)' : (isMine ? 'var(--c-ng-bg)' : 'var(--c-bg)');
               const mark = isAns ? ' ✓正解' : (isMine ? ' ✕あなたの回答' : '');
               return `<div style="font-size:var(--fs-base);padding:8px 10px;margin-bottom:6px;border-radius:var(--radius-s);background:${bg};color:${color};border:1px solid var(--c-border);">${LABELS[i] || ''}. ${esc(c)}<b style="font-size:var(--fs-xs);">${mark}</b></div>`;
             }).join('')}
-            <p style="font-size:var(--fs-sm);color:#374151;margin-top:8px;line-height:1.7;">${esc(q.explanation)}</p>
+            <p style="font-size:var(--fs-sm);color:var(--c-text-2);margin-top:8px;line-height:1.7;">${esc(q.explanation)}</p>
           </div>`;
       }).join('')}`}
     `;
@@ -1359,9 +1439,30 @@ ${levelDesc}
 
     document.getElementById('overall-stats').innerHTML = `
       <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">総問題数</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:${total > 0 && rate >= 60 ? 'var(--c-success)' : total > 0 ? 'var(--c-danger)' : 'var(--c-primary)'}">${total > 0 ? rate + '%' : '–'}</div><div class="stat-label">総正答率</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:${total > 0 && rate >= 60 ? 'var(--c-success)' : total > 0 ? 'var(--c-danger)' : 'var(--c-primary-text)'}">${total > 0 ? rate + '%' : '–'}</div><div class="stat-label">総正答率</div></div>
       <div class="stat-card"><div class="stat-num" style="color:var(--c-warning)">${sessions}</div><div class="stat-label">セッション数</div></div>
     `;
+
+    // 等級別
+    const gradeMap = {};
+    state.history.forEach(h => {
+      const g = String(h.grade);
+      if (!gradeMap[g]) gradeMap[g] = { answered: 0, correct: 0 };
+      gradeMap[g].answered += h.count;
+      gradeMap[g].correct  += h.correct;
+    });
+    const gradeOrder = ['BASIC', '3', '2', '1'].filter(g => gradeMap[g] && gradeMap[g].answered > 0);
+    document.getElementById('grade-stats-wrap').style.display = gradeOrder.length ? 'block' : 'none';
+    document.getElementById('grade-stats').innerHTML = gradeOrder.map(g => {
+      const gs = gradeMap[g];
+      const r  = Math.round(gs.correct / gs.answered * 100);
+      return `
+        <div class="stat-card" style="text-align:left;">
+          <div style="font-size:var(--fs-sm);color:var(--c-sub);font-weight:600;">${esc(g === 'BASIC' ? 'BASIC級' : g + '級')}</div>
+          <div class="stat-num" style="color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</div>
+          <div style="font-size:var(--fs-sm);color:var(--c-sub);">${gs.answered}問中${gs.correct}問正解</div>
+        </div>`;
+    }).join('');
 
     // 分野別（[CRITICAL修正] fs.name, fs.icon は history から取得 → esc() で保護）
     const fieldStats = {};
@@ -1424,7 +1525,7 @@ ${levelDesc}
           <button type="button" class="history-item tappable" data-id="${esc(h.id)}" aria-label="${esc(h.fieldName)} ${esc(gradeLabel)} ${r}% 詳細を見る"
             style="display:block;width:100%;text-align:left;color:inherit;font-size:inherit;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <span style="font-size:var(--fs-base);font-weight:600;">${esc(h.fieldIcon)} ${esc(h.fieldName)}${h.review ? ' <span class="tag" style="font-size:var(--fs-xs);color:var(--c-warning);background:#fffbeb;">復習</span>' : ''}</span>
+              <span style="font-size:var(--fs-base);font-weight:600;">${esc(h.fieldIcon)} ${esc(h.fieldName)}${h.review ? ' <span class="tag" style="font-size:var(--fs-xs);color:var(--c-warning);background:var(--c-warn-bg);">復習</span>' : ''}</span>
               <span style="font-weight:700;font-size:var(--fs-lg);color:${r >= 60 ? 'var(--c-success)' : 'var(--c-danger)'}">${r}%</span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -1453,19 +1554,14 @@ ${levelDesc}
     const dialog = document.getElementById('confirm-dialog');
     dialog.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-
-    const ac = new AbortController();
-    dialog._cleanup = () => ac.abort();
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeConfirm();
-    }, { signal: ac.signal });
+    activateModal(dialog, closeConfirm);
   }
 
   function closeConfirm() {
     const d = document.getElementById('confirm-dialog');
     d.style.display = 'none';
     document.body.style.overflow = '';
-    d._cleanup?.();
+    deactivateModal(d);
   }
 
   function confirmReset() {
@@ -1482,6 +1578,37 @@ ${levelDesc}
     });
   }
 
+  // ── モーダル共通：フォーカス移動・Tab循環・Esc・背景の操作無効化 ──
+  const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])';
+
+  function activateModal(dialog, onEscape) {
+    if (dialog._modal) return;
+    const ac = new AbortController();
+    dialog._modal = { ac, opener: document.activeElement };
+    document.getElementById('app').setAttribute('inert', ''); // 背景をスクリーンリーダー・Tab操作の対象外に
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.preventDefault(); onEscape(); return; }
+      if (e.key !== 'Tab') return;
+      const items = [...dialog.querySelectorAll(FOCUSABLE)].filter(el => el.getClientRects().length > 0);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1], a = document.activeElement;
+      if (e.shiftKey && (a === first || !dialog.contains(a))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (a === last || !dialog.contains(a))) { e.preventDefault(); first.focus(); }
+    }, { signal: ac.signal });
+    const target = dialog.querySelector('[data-autofocus]') || dialog.querySelector(FOCUSABLE);
+    if (target) target.focus({ preventScroll: true });
+  }
+
+  function deactivateModal(dialog) {
+    const m = dialog._modal;
+    if (!m) return;
+    m.ac.abort();
+    dialog._modal = null;
+    document.getElementById('app').removeAttribute('inert');
+    const o = m.opener; // 開いた時の要素にフォーカスを戻す
+    if (o && o !== document.body && document.contains(o)) o.focus({ preventScroll: true });
+  }
+
   // ── ユーティリティ ─────────────────────────────
   function haptic(type = 'light') {
     navigator.vibrate?.(type === 'heavy' ? [30] : [10]);
@@ -1496,7 +1623,7 @@ ${levelDesc}
   }
 
   function showToast(message, type = 'success') {
-    const colors = { success: '#22c55e', error: '#ef4444', info: '#3B82F6' };
+    const colors = { success: '#15803d', error: '#dc2626', info: '#2563eb' }; // 白文字で読めるコントラスト
     const icons  = { success: '✓',      error: '✕',       info: 'ℹ' };
     const t = document.createElement('div');
     t.setAttribute('role', 'alert');
@@ -1549,8 +1676,41 @@ ${levelDesc}
   window.closeQuitDialog = closeQuitDialog;
   window.doQuitQuiz      = doQuitQuiz;
 
+  // ── キーボード操作（1〜4 / A〜D で回答、Enter・N・→ で次へ） ──
+  document.addEventListener('keydown', e => {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!document.getElementById('page-quiz').classList.contains('active')) return;
+    if (document.getElementById('app').hasAttribute('inert')) return; // ダイアログ表示中
+    if (document.getElementById('loading-overlay').style.display === 'flex') return;
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const idx = k.length === 1 ? ('1234'.indexOf(k) >= 0 ? '1234'.indexOf(k) : 'abcd'.indexOf(k)) : -1;
+    if (idx >= 0) {
+      const btn = document.querySelectorAll('#quiz-choices .choice-btn')[idx];
+      if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+      return;
+    }
+    if (k === 'Enter' || k === 'n' || k === 'ArrowRight') {
+      const nav = document.getElementById('quiz-nav');
+      const navBtn = nav.style.display !== 'none' ? nav.querySelector('button') : null;
+      if (!navBtn) return;
+      // ボタンにフォーカス中のEnterはブラウザ標準の動作に任せる（二重実行防止）
+      if (k === 'Enter' && tag === 'BUTTON') return;
+      e.preventDefault();
+      navBtn.click();
+    }
+  });
+
   // ── 初期化 ────────────────────────────────────
   showPage('home');
+  _booted = true;
+
+  // オフライン対応（HTTPS配信時のみ）
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 })();
 </script>
 </body>
