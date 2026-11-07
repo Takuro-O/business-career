@@ -486,7 +486,7 @@
   }
   // 優先モデル → 利用不可(404)の場合は次のモデルへフォールバック
   const REQUEST_TIMEOUT_MS = 90000; // 1回の呼び出しの待ち時間の上限
-  const MODELS      = ['gemini-3.8-flash', 'gemini-3.6-flash'];
+  const MODELS      = ['gemini-3.6-flash', 'gemini-3.8-flash']; // 3.8は応答が遅い（1回70〜300秒）ため3.6を優先
   const MAX_HISTORY = 100;
   const RECENT_SESSIONS = 20;   // 履歴画面に表示する件数・重複チェックの対象
   const PROGRESS_KEY = 'bizcareer_quiz_progress_v1'; // 解答中クイズの途中保存
