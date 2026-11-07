@@ -870,6 +870,36 @@
   function getVerify() { try { return localStorage.getItem('bizcareer_verify') !== '0'; } catch { return true; } }
   function setVerify(v) { try { localStorage.setItem('bizcareer_verify', v ? '1' : '0'); } catch {} }
 
+  // ── 無料枠の目安：1日のAPI呼び出し回数を端末内で数え、超えそうなら生成しない ──
+  // 上限はAI Studioのrate limitページで確認した値に合わせて変更する。リセットは太平洋時間の0時。
+  const DAILY_LIMIT = 20;
+  const USAGE_KEY = 'bizcareer_usage_v1';
+  const pacificDay = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(d);
+  function getUsage() {
+    try {
+      const u = JSON.parse(localStorage.getItem(USAGE_KEY));
+      if (u && u.day === pacificDay() && Number.isFinite(u.n)) return u;
+    } catch {}
+    return { day: pacificDay(), n: 0, full: false };
+  }
+  function saveUsage(u) { try { localStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch {} }
+  function countApiCall(full) {
+    const u = getUsage();
+    if (full) u.full = true; else u.n += 1;
+    saveUsage(u);
+  }
+  function quotaLeft(need) { // 今日あと need 回呼べるか
+    const u = getUsage();
+    return !u.full && u.n + need <= DAILY_LIMIT;
+  }
+  function resetTimeText() {
+    const day = pacificDay();
+    let t = Date.now();
+    for (let i = 0; i < 100 && pacificDay(new Date(t)) === day; i++) t += 15 * 60 * 1000;
+    t -= t % (15 * 60 * 1000); // 15分刻みで探したので、ちょうどの時刻に丸める
+    return new Date(t).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
+  }
+
   function openConfig(fieldId) {
     // [MAJOR修正] 二重オープン防止
     if (document.getElementById('config-modal').style.display === 'flex') return;
@@ -1021,6 +1051,11 @@
     const verify = document.getElementById('verify-toggle')?.checked !== false;
     setVerify(verify);
 
+    const verifyOn = document.getElementById('verify-toggle')?.checked !== false;
+    if (!quotaLeft(verifyOn ? 2 : 1)) {
+      showToast(`今日の無料枠の目安に達しました。${resetTimeText()}ごろ（日本時間）に戻ります。`, 'error');
+      return;
+    }
     if (navigator.onLine === false) { showToast(ERROR_MESSAGES.network, 'error'); return; }
     _isGenerating = true;
 
@@ -1056,7 +1091,9 @@
       }
     } catch (e) {
       hideLoading();
-      showToast(ERROR_MESSAGES[e && e.kind] || ERROR_MESSAGES.invalid, 'error');
+      showToast(e && e.kind === 'quota_day'
+        ? `${ERROR_MESSAGES.quota_day}${resetTimeText()}ごろ（日本時間）に戻ります。`
+        : (ERROR_MESSAGES[e && e.kind] || ERROR_MESSAGES.invalid), 'error');
     } finally {
       _isGenerating    = false;
       btn.disabled     = false;
@@ -1083,7 +1120,7 @@
       } catch (e) {
         throw new QuizError('network');
       }
-      if (res.status !== 404) break; // モデル未提供のときだけ次の候補へ
+      if (res.status !== 404) { countApiCall(); break; } // モデル未提供のときだけ次の候補へ
     }
 
     if (!res.ok) {
@@ -1094,7 +1131,12 @@
         const msg = String(errBody?.error?.message || '');
         throw new QuizError(/api key|permission|unauthenticated/i.test(msg) || status !== 400 ? 'auth' : 'bad_request');
       }
-      if (status === 429) throw new QuizError('rate_limit');
+      if (status === 429) {
+        // 1日の上限に達したときは、リセットまで生成しない（1分あたりの上限なら待てば戻る）
+        const errBody = await res.json().catch(() => ({}));
+        if (/PerDay|per day|daily/i.test(JSON.stringify(errBody))) { countApiCall(true); throw new QuizError('quota_day'); }
+        throw new QuizError('rate_limit');
+      }
       if (status >= 500) throw new QuizError('server');
       throw new QuizError('bad_request');
     }
@@ -1410,6 +1452,7 @@ ${planBlock}【良問の条件】
   const ERROR_MESSAGES = {
     auth:        'APIキーを確認してください。',
     rate_limit:  '利用上限です。しばらく待ってください。',
+    quota_day:   '今日の無料枠を使い切りました。',
     network:     '通信できません。接続を確認してください。',
     server:      'サーバーが混雑中です。少し待って再試行してください。',
     truncated:   '問題が長すぎます。問題数を減らしてください。',
