@@ -3,6 +3,8 @@ name: 問題バンクの生成
 on:
   schedule:
     - cron: '17 19 * * *'   # 毎日 日本時間 4:17（Googleの1日枠が戻った後）
+    - cron: '17 1 * * *'    # 日本時間 10:17（途中で止まった分を続ける）
+    - cron: '17 7 * * *'    # 日本時間 16:17
   workflow_dispatch:
     inputs:
       models:
@@ -12,7 +14,7 @@ on:
       target:
         description: '目標問数'
         required: false
-        default: '100'
+        default: '50'
 
 permissions:
   contents: write
@@ -27,11 +29,11 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-save jsdom@24
-      - name: 問題を生成（目標に届くまで毎日少しずつ追加）
+      - name: 問題を生成（問題数が少ない分野から順に、目標に届くまで追加）
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODELS: ${{ inputs.models }}
-        run: node tools/generate-bank.mjs jinzai 3 ${{ inputs.target || 100 }}
+        run: node tools/generate-bank.mjs auto ${{ inputs.target || 50 }} 3
       - name: 変更をコミット
         run: |
           git config user.name "github-actions[bot]"

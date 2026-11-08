@@ -112,10 +112,41 @@ export async function generate({ field, grade, target = 100, apiKey, fetchImpl =
   return { count: bank.questions.length, stopped };
 }
 
+// 自動モード: 分野×等級のうち問題数が一番少ない組み合わせから順に、目標に届くまで1バッチずつ追加する
+export async function generateAuto({ target = 50, grades = ['3'], outDir = path.join(ROOT, 'bank'), htmlPath = path.join(ROOT, 'index.html'),
+  batch = 10, log = console.log, ...rest }) {
+  const html = fs.readFileSync(htmlPath, 'utf8');
+  const fields = [...html.matchAll(/\{ id: '(\w+)',\s+icon: '[^']+',\s+name: '[^']+',\s+sub: '[^']+',\s+grades: \[([^\]]*)\]/g)]
+    .map(m => ({ id: m[1], grades: [...m[2].matchAll(/'(\w+)'/g)].map(x => x[1]) }))
+    .filter(f => f.id !== 'random');
+  const combos = fields.flatMap(f => grades.filter(g => f.grades.includes(g)).map(g => ({ field: f.id, grade: g })));
+  const countOf = c => {
+    try { return JSON.parse(fs.readFileSync(path.join(outDir, `${c.field}-${c.grade}.json`), 'utf8')).questions.length; } catch { return 0; }
+  };
+  let total = 0, stopped = '';
+  for (;;) {
+    const next = combos.map(c => ({ ...c, n: countOf(c) })).filter(c => c.n < target).sort((a, b) => a.n - b.n)[0];
+    if (!next) break;
+    const r = await generate({ field: next.field, grade: next.grade, target: next.n + batch, outDir, htmlPath, batch, log, ...rest });
+    total += r.count - next.n;
+    if (r.stopped) { stopped = r.stopped; break; }
+    if (r.count <= next.n) { stopped = '問題が増えなかったため中断'; break; }
+  }
+  return { added: total, stopped, status: combos.map(c => `${c.field}-${c.grade}: ${countOf(c)}`) };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [field, grade, target] = process.argv.slice(2);
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!field || !grade || !apiKey) { console.error('使い方: GEMINI_API_KEY=... node tools/generate-bank.mjs <分野ID> <等級> [問数]'); process.exit(2); }
-  const r = await generate({ field, grade, target: Number(target) || 100, apiKey });
-  console.log(`完了: ${r.count}問${r.stopped ? '（' + r.stopped + '）' : ''}`);
+  if (process.argv[2] === 'auto') {
+    // 使い方: GEMINI_API_KEY=... node tools/generate-bank.mjs auto [目標問数=50] [等級,等級…=3]
+    if (!apiKey) { console.error('GEMINI_API_KEY がありません'); process.exit(2); }
+    const r = await generateAuto({ target: Number(process.argv[3]) || 50, grades: (process.argv[4] || '3').split(','), apiKey });
+    console.log(r.status.join('\n'));
+    console.log(`完了: ${r.added}問追加${r.stopped ? '（' + r.stopped + '）' : ''}`);
+  } else {
+    const [field, grade, target] = process.argv.slice(2);
+    if (!field || !grade || !apiKey) { console.error('使い方: GEMINI_API_KEY=... node tools/generate-bank.mjs <分野ID> <等級> [問数]'); process.exit(2); }
+    const r = await generate({ field, grade, target: Number(target) || 100, apiKey });
+    console.log(`完了: ${r.count}問${r.stopped ? '（' + r.stopped + '）' : ''}`);
+  }
 }

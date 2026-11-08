@@ -494,6 +494,8 @@
 
   // 8分野定義（ユーザー操作で書き換わらない定数）
   const FIELDS = [
+    // 問題バンクから分野をまたいで出題する仮想の分野（AI生成は使わない）
+    { id: 'random',   icon: '🎲', name: 'ランダム（全分野）', sub: '分野をまたいで出題（問題バンクから）', grades: ['BASIC','3','2','1'], areas: [], topics: [], virtual: true },
     { id: 'jinzai',   icon: '👥', name: '人事・人材開発',      sub: '採用・育成・評価・賃金',         grades: ['3','2','1'],       areas: ['人事・人材開発','労務管理'],
       topics: ['人事管理', '採用', '配置・異動', '人事評価', '賃金管理', '退職金・企業年金', '人材育成', 'キャリア開発', '組織開発', '労働契約', '労働基準法', '労働時間管理', '就業規則', '労働安全衛生', '社会保険・労働保険', '労使関係', 'ハラスメント対策', 'ダイバーシティ'] },
     { id: 'keiri',    icon: '💰', name: '経理・財務管理',      sub: '財務諸表・原価計算・資金管理',   grades: ['3','2','1'],       areas: ['経理・財務管理'],
@@ -904,6 +906,29 @@
     }
     return shuffle(picked.concat(fresh, old).slice(0, count));
   }
+  // ランダム出題：バンクがある全分野の問題を集め、分野ごとに均等になるよう選ぶ
+  async function getRandomBank(grade) {
+    const fs = FIELDS.filter(f => !f.virtual && f.grades.includes(grade));
+    const banks = await Promise.all(fs.map(f => getBank(f, grade)));
+    const all = [];
+    fs.forEach((f, i) => (banks[i] || []).forEach(q => all.push({ ...q, fieldId: f.id, fieldName: f.name, fieldIcon: f.icon })));
+    return all.length >= 10 ? all : null;
+  }
+  function pickRandomFromBank(bank, count) {
+    const seen = recentQuestionGrams();
+    const isSeen = q => { const g = questionGrams(q.q, q.choices); return seen.some(x => jaccard(x, g) >= DUP_THRESHOLD); };
+    const groups = new Map();
+    shuffle(bank).sort((a, b) => isSeen(a) - isSeen(b)).forEach(q => { // 未出題を先に
+      if (!groups.has(q.fieldId)) groups.set(q.fieldId, []);
+      groups.get(q.fieldId).push(q);
+    });
+    const lists = shuffle([...groups.values()]);
+    const picked = [];
+    while (picked.length < count && lists.some(l => l.length)) {
+      for (const l of lists) if (l.length && picked.length < count) picked.push(l.shift());
+    }
+    return shuffle(picked);
+  }
   const getLive = () => { try { return localStorage.getItem('bizcareer_live') === '1'; } catch { return false; } };
   const setLive = v => { try { localStorage.setItem('bizcareer_live', v ? '1' : '0'); } catch {} };
 
@@ -984,7 +1009,7 @@
     const lt = document.getElementById('live-toggle');
     if (lt) lt.checked = getLive();
     const adv = document.getElementById('advanced');
-    if (adv) adv.open = !!(srcEl && srcEl.value);
+    if (adv) { adv.open = !!(srcEl && srcEl.value); adv.style.display = f.virtual ? 'none' : ''; }
 
     document.getElementById('config-modal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -1073,9 +1098,16 @@
     const live = document.getElementById('live-toggle')?.checked === true;
     setLive(live);
     let bank = null;
-    if (!srcText && !live && quizSession.field) {
+    const virtual = !!(quizSession.field && quizSession.field.virtual);
+    if (virtual || (!srcText && !live && quizSession.field)) {
       _isGenerating = true;
-      try { bank = await getBank(quizSession.field, selectedGrade); } finally { _isGenerating = false; }
+      try {
+        bank = virtual ? await getRandomBank(selectedGrade) : await getBank(quizSession.field, selectedGrade);
+      } finally { _isGenerating = false; }
+    }
+    if (virtual && !bank) {
+      showToast('この等級は、ランダム出題に使える問題バンクがまだ足りません。', 'info');
+      return;
     }
     return startQuizInner(bank);
   }
@@ -1131,7 +1163,9 @@
     try {
       const focus = (selectedFocus === 'weak' && !source) ? 'weak' : 'all';
       const { questions, unverified } = bank
-        ? { questions: pickFromBank(quizSession.field, bank, quizSession.count, focus), unverified: false }
+        ? { questions: quizSession.field.virtual
+              ? pickRandomFromBank(bank, quizSession.count)
+              : pickFromBank(quizSession.field, bank, quizSession.count, focus), unverified: false }
         : await buildQuiz(
           quizSession.field, quizSession.grade, quizSession.count, source, focus, verify,
           stage => showLoading(stage === 'verify' ? '問題を検算中…' : '問題を作成中…'));
@@ -1227,8 +1261,8 @@
   function fieldTopicStats(fieldId) {
     const m = new Map();
     state.history.forEach(h => {
-      if (h.field !== fieldId) return;
       (Array.isArray(h.questions) ? h.questions : []).forEach(q => {
+        if ((q.fieldId || h.field) !== fieldId) return; // ランダム出題の問題も元の分野に数える
         const t = typeof q.topic === 'string' ? q.topic.trim() : '';
         if (!t || typeof q.isRight !== 'boolean') return;
         const e = m.get(t) || { n: 0, ok: 0 };
@@ -1583,7 +1617,7 @@ ${planBlock}【良問の条件】
     if (q.topic) {
       const topicTag = document.createElement('span');
       topicTag.style.cssText = 'font-size:var(--fs-xs);color:var(--c-sub);background:var(--c-surface);padding:2px 8px;border-radius:10px;';
-      topicTag.textContent = q.topic;
+      topicTag.textContent = q.fieldName ? `${q.fieldName} ／ ${q.topic}` : q.topic;
       metaEl.appendChild(topicTag);
     }
 
@@ -1897,8 +1931,8 @@ ${planBlock}【良問の条件】
       (Array.isArray(h.questions) ? h.questions : []).forEach(q => {
         const topic = typeof q.topic === 'string' ? q.topic.trim() : '';
         if (!topic || typeof q.isRight !== 'boolean') return;
-        const key = h.field + '::' + topic;
-        if (!map.has(key)) map.set(key, { topic, icon: h.fieldIcon, field: h.fieldName, n: 0, ok: 0 });
+        const key = (q.fieldId || h.field) + '::' + topic;
+        if (!map.has(key)) map.set(key, { topic, icon: q.fieldIcon || h.fieldIcon, field: q.fieldName || h.fieldName, n: 0, ok: 0 });
         const t = map.get(key);
         t.n++;
         if (q.isRight) t.ok++;
