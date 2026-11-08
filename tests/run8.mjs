@@ -1,0 +1,24 @@
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import { generate } from '../tools/generate-bank.mjs';
+const log=[];const ok=(c,m)=>log.push((c?'PASS ':'FAIL ')+m);
+let n=0;const uniq=(i,k=0,len=14)=>Array.from({length:len},(_,j)=>String.fromCharCode(0x4e00+(i%40)*400+k*60+j+Math.floor(i/40)*7)).join('');
+const mk=i=>({q:'Q'+i+'：'+uniq(i),choices:['正'+uniq(i,1),'誤甲'+uniq(i,2),'誤乙'+uniq(i,3),'誤丙'+uniq(i,4)],answer:0,explanation:'解説'+i,topic:'賃金管理',volatile:false});
+const resp=o=>({ok:true,status:200,json:async()=>({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(o)}]}}]})});
+let mode='ok',calls=0;
+const f=async(url,opts)=>{calls++;const pr=JSON.parse(opts.body).contents[0].parts[0].text;
+ if(mode==='quota')return{ok:false,status:429,json:async()=>({error:{details:[{quotaId:'RequestsPerDay'}]}})};
+ if(pr.includes('採点者')){const items=JSON.parse(pr.slice(pr.indexOf('【問題】\n')+5));return resp({results:items.map(it=>({id:it.id,answer:it.choices.findIndex(c=>c.startsWith('正')),ambiguous:false,confidence:'high'}))});}
+ return resp({questions:Array.from({length:14},()=>mk(n++))});};
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'bank-'));
+const msgs=[];
+let r=await generate({field:'jinzai',grade:'3',target:25,apiKey:'k',fetchImpl:f,outDir:dir,log:m=>msgs.push(m)});
+const b=JSON.parse(fs.readFileSync(path.join(dir,'jinzai-3.json'),'utf8'));
+ok(r.count>=25&&b.questions.length===r.count,'generated up to target: '+r.count);
+ok(b.questions.every(q=>q.choices.length===4&&q.answer>=0&&q.answer<4&&q.explanation&&q.topic&&q.createdAt),'questions well-formed');
+ok(new Set(b.questions.map(q=>q.q)).size===b.questions.length,'no duplicates');
+ok(b.questions.every(q=>q.choices[q.answer].startsWith('正')),'answer index tracks shuffle');
+const c0=calls;r=await generate({field:'jinzai',grade:'3',target:25,apiKey:'k',fetchImpl:f,outDir:dir,log:()=>{}});
+ok(calls===c0,'already at target → no API calls');
+mode='quota';r=await generate({field:'jinzai',grade:'2',target:10,apiKey:'k',fetchImpl:f,outDir:dir,log:()=>{}});
+ok(/無料枠/.test(r.stopped)&&r.count===0,'quota stop: '+r.stopped);
+console.log(log.join('\n'));process.exit(log.some(l=>l.startsWith('FAIL'))?1:0);
